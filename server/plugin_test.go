@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,17 +12,13 @@ func TestServeHTTP(t *testing.T) {
 	assert := assert.New(t)
 	plugin := Plugin{}
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/api/v1/hello", nil)
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/nonexistent", nil)
 	r.Header.Set("Mattermost-User-ID", "test-user-id")
 
 	plugin.ServeHTTP(nil, w, r)
 
 	result := w.Result()
 	assert.NotNil(result)
-	defer result.Body.Close()
-	bodyBytes, err := io.ReadAll(result.Body)
-	assert.Nil(err)
-	bodyString := string(bodyBytes)
-
-	assert.Equal("Hello, world!", bodyString)
+	// Should return 404 for non-existent endpoint
+	assert.Equal(http.StatusNotFound, result.StatusCode)
 }

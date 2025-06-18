@@ -19,24 +19,22 @@ type Plugin struct {
 	// client is the Mattermost server API client.
 	client *pluginapi.Client
 
-
 	// configurationLock synchronizes access to the configuration.
 	configurationLock sync.RWMutex
 
 	// configuration is the active plugin configuration. Consult getConfiguration and
 	// setConfiguration for usage.
 	configuration *configuration
-
 }
 
 // OnActivate is invoked when the plugin is activated. If an error is returned, the plugin will be deactivated.
 func (p *Plugin) OnActivate() error {
-	p.client = pluginapi.NewClient(p.API, p.Driver)
+	p.client = pluginapi.NewClient(p.MattermostPlugin.API, p.MattermostPlugin.Driver)
 	p.client.Log.Info("PagerDuty plugin activating")
 
 	p.kvstore = kvstore.NewKVStore(p.client)
 
-	config := p.API.GetConfig()
+	config := p.MattermostPlugin.API.GetConfig()
 	if config.ServiceSettings.SiteURL == nil {
 		p.client.Log.Error("Site URL is not configured")
 		return errors.New("site URL is not configured")

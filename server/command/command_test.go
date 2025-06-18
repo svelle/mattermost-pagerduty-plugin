@@ -51,13 +51,21 @@ func TestPagerDutyCommand(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	// Mock the command registration
+	// Mock the command registration - we need to match the actual structure with subcommands
+	expectedData := model.NewAutocompleteData(commandTrigger, "[subcommand]", "Available subcommands: help, schedules, oncall")
+	help := model.NewAutocompleteData("help", "", "Shows this help message")
+	expectedData.AddCommand(help)
+	schedules := model.NewAutocompleteData("schedules", "", "List all PagerDuty schedules")
+	expectedData.AddCommand(schedules)
+	oncall := model.NewAutocompleteData("oncall", "", "Show who's currently on-call")
+	expectedData.AddCommand(oncall)
+	
 	env.api.On("RegisterCommand", &model.Command{
 		Trigger:          commandTrigger,
 		AutoComplete:     true,
 		AutoCompleteDesc: "PagerDuty integration",
 		AutoCompleteHint: "[help|schedules|oncall]",
-		AutocompleteData: model.NewAutocompleteData(commandTrigger, "[subcommand]", "Available subcommands: help, schedules, oncall"),
+		AutocompleteData: expectedData,
 	}).Return(nil).Maybe()
 
 	cmdHandler := NewCommandHandler(env.client, env.pluginAPI, "http://localhost:8065")
