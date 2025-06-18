@@ -63,13 +63,13 @@ func TestNewClient(t *testing.T) {
 
 func TestClient_doRequest(t *testing.T) {
 	tests := []struct {
-		name       string
-		method     string
-		path       string
-		params     url.Values
-		mockFunc   func(req *http.Request) (*http.Response, error)
-		wantBody   string
-		wantErr    bool
+		name        string
+		method      string
+		path        string
+		params      url.Values
+		mockFunc    func(req *http.Request) (*http.Response, error)
+		wantBody    string
+		wantErr     bool
 		errContains string
 	}{
 		{
@@ -83,7 +83,7 @@ func TestClient_doRequest(t *testing.T) {
 				assert.Equal(t, "https://api.pagerduty.com/api/v1/schedules?limit=10", req.URL.String())
 				assert.Equal(t, "application/vnd.pagerduty+json;version=2", req.Header.Get("Accept"))
 				assert.Equal(t, "Token token=test-token", req.Header.Get("Authorization"))
-				
+
 				return newMockResponse(200, `{"schedules": []}`), nil
 			},
 			wantBody: `{"schedules": []}`,
@@ -122,7 +122,7 @@ func TestClient_doRequest(t *testing.T) {
 			}
 
 			body, err := client.doRequest(tt.method, tt.path, tt.params)
-			
+
 			if tt.wantErr {
 				require.Error(t, err)
 				if tt.errContains != "" {
@@ -138,12 +138,12 @@ func TestClient_doRequest(t *testing.T) {
 
 func TestClient_GetSchedules(t *testing.T) {
 	tests := []struct {
-		name      string
-		limit     int
-		offset    int
-		mockFunc  func(req *http.Request) (*http.Response, error)
-		want      *SchedulesResponse
-		wantErr   bool
+		name     string
+		limit    int
+		offset   int
+		mockFunc func(req *http.Request) (*http.Response, error)
+		want     *SchedulesResponse
+		wantErr  bool
 	}{
 		{
 			name:   "successful response",
@@ -153,7 +153,7 @@ func TestClient_GetSchedules(t *testing.T) {
 				// Verify query parameters
 				assert.Equal(t, "25", req.URL.Query().Get("limit"))
 				assert.Equal(t, "0", req.URL.Query().Get("offset"))
-				
+
 				return newMockResponse(200, `{
 					"schedules": [
 						{
@@ -214,7 +214,7 @@ func TestClient_GetSchedules(t *testing.T) {
 			}
 
 			got, err := client.GetSchedules(tt.limit, tt.offset)
-			
+
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -246,7 +246,7 @@ func TestClient_GetOnCalls(t *testing.T) {
 				assert.Equal(t, []string{"SCHED1", "SCHED2"}, query["schedule_ids[]"])
 				assert.Equal(t, "2024-01-01T00:00:00Z", query.Get("since"))
 				assert.Equal(t, "2024-01-02T00:00:00Z", query.Get("until"))
-				
+
 				return newMockResponse(200, `{
 					"oncalls": [
 						{
@@ -312,7 +312,7 @@ func TestClient_GetOnCalls(t *testing.T) {
 			}
 
 			got, err := client.GetOnCalls(tt.params)
-			
+
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -343,7 +343,7 @@ func TestClient_GetSchedule(t *testing.T) {
 				assert.Contains(t, req.URL.Path, "SCHED1")
 				assert.Equal(t, "2024-01-01T00:00:00Z", req.URL.Query().Get("since"))
 				assert.Equal(t, "2024-01-02T00:00:00Z", req.URL.Query().Get("until"))
-				
+
 				return newMockResponse(200, `{
 					"schedule": {
 						"id": "SCHED1",
@@ -406,7 +406,7 @@ func TestClient_GetSchedule(t *testing.T) {
 			}
 
 			got, err := client.GetSchedule(tt.scheduleID, tt.since, tt.until)
-			
+
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -428,7 +428,7 @@ func TestClient_GetCurrentOnCalls(t *testing.T) {
 				assert.Equal(t, "UTC", query.Get("time_zone"))
 				assert.Equal(t, []string{"users", "schedules"}, query["include[]"])
 				assert.Equal(t, "true", query.Get("earliest"))
-				
+
 				return newMockResponse(200, `{
 					"oncalls": [{
 						"user": {"id": "USER1", "name": "John Doe"},
@@ -460,7 +460,7 @@ func TestClient_GetOnCallsForSchedule(t *testing.T) {
 				assert.Equal(t, []string{scheduleID}, query["schedule_ids[]"])
 				assert.Equal(t, []string{"users"}, query["include[]"])
 				assert.Equal(t, "true", query.Get("earliest"))
-				
+
 				return newMockResponse(200, `{"oncalls": []}`), nil
 			},
 		},

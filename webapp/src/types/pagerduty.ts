@@ -33,7 +33,7 @@ export interface FinalSchedule {
 }
 
 export interface ScheduleEntry {
-    user: UserReference;
+    user: User;
     start: string;
     end: string;
 }

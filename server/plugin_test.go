@@ -37,7 +37,7 @@ func TestPlugin_OnActivate(t *testing.T) {
 		plugin.SetAPI(api)
 
 		err := plugin.OnActivate()
-		
+
 		require.NoError(t, err)
 		assert.NotNil(t, plugin.client)
 		assert.NotNil(t, plugin.kvstore)
@@ -211,7 +211,7 @@ func TestPlugin_Configuration(t *testing.T) {
 		}
 
 		plugin.setConfiguration(config)
-		
+
 		// Verify configuration was set
 		got := plugin.getConfiguration()
 		assert.Equal(t, config, got)
@@ -235,7 +235,7 @@ func TestPlugin_Configuration(t *testing.T) {
 		// Test configuration change
 		err := plugin.OnConfigurationChange()
 		assert.NoError(t, err)
-		
+
 		// Verify configuration was loaded
 		config := plugin.getConfiguration()
 		assert.Equal(t, "test-token", config.APIToken)

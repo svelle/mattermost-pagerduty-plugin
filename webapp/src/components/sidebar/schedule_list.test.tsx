@@ -14,12 +14,14 @@ describe('ScheduleList', () => {
             name: 'Primary On-Call',
             description: 'Main support schedule',
             time_zone: 'America/New_York',
+            summary: 'Primary On-Call',
         },
         {
             id: 'SCHED2',
             name: 'Secondary On-Call',
             description: 'Backup support schedule',
             time_zone: 'America/Los_Angeles',
+            summary: 'Secondary On-Call',
         },
     ];
 

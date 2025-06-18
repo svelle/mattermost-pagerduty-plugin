@@ -18,13 +18,13 @@ import (
 // SetupTestPlugin creates a test plugin instance with mocked API
 func SetupTestPlugin(t *testing.T) (*plugintest.API, *mux.Router) {
 	api := &plugintest.API{}
-	
+
 	// Set up common expectations
 	api.On("LogDebug", mock.Anything, mock.Anything, mock.Anything).Maybe()
 	api.On("LogInfo", mock.Anything, mock.Anything, mock.Anything).Maybe()
 	api.On("LogWarn", mock.Anything, mock.Anything, mock.Anything).Maybe()
 	api.On("LogError", mock.Anything, mock.Anything, mock.Anything).Maybe()
-	
+
 	router := mux.NewRouter()
 	return api, router
 }
@@ -37,20 +37,20 @@ func MakeAuthenticatedRequest(t *testing.T, method, url string, body interface{}
 		require.NoError(t, err)
 		bodyReader = bytes.NewReader(bodyBytes)
 	}
-	
+
 	req := httptest.NewRequest(method, url, bodyReader)
 	req.Header.Set("Mattermost-User-ID", userID)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	
+
 	return req
 }
 
 // AssertJSONResponse checks if the response has the expected status code and decodes the JSON body
 func AssertJSONResponse(t *testing.T, w *httptest.ResponseRecorder, expectedStatus int, v interface{}) {
 	require.Equal(t, expectedStatus, w.Code)
-	
+
 	if v != nil && w.Body.Len() > 0 {
 		require.Equal(t, "application/json", w.Header().Get("Content-Type"))
 		err := json.NewDecoder(w.Body).Decode(v)
