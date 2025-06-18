@@ -3,10 +3,11 @@ package main
 import (
 	"sync"
 
-	"github.com/mattermost/mattermost-pagerduty-plugin/server/store/kvstore"
 	"github.com/mattermost/mattermost/server/public/plugin"
 	"github.com/mattermost/mattermost/server/public/pluginapi"
 	"github.com/pkg/errors"
+
+	"github.com/mattermost/mattermost-pagerduty-plugin/server/store/kvstore"
 )
 
 // Plugin implements the interface expected by the Mattermost server to communicate between the server and plugin processes.
@@ -63,7 +64,5 @@ func (p *Plugin) OnDeactivate() error {
 	}
 	return nil
 }
-
-
 
 // See https://developers.mattermost.com/extend/plugins/server/reference/

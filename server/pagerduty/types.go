@@ -14,13 +14,13 @@ type Schedule struct {
 }
 
 type ScheduleLayer struct {
-	ID                         string    `json:"id"`
-	Name                       string    `json:"name"`
-	Start                      time.Time `json:"start"`
-	End                        *time.Time `json:"end"`
-	RotationVirtualStart       time.Time `json:"rotation_virtual_start"`
-	RotationTurnLengthSeconds  int       `json:"rotation_turn_length_seconds"`
-	Users                      []UserReference `json:"users"`
+	ID                        string          `json:"id"`
+	Name                      string          `json:"name"`
+	Start                     time.Time       `json:"start"`
+	End                       *time.Time      `json:"end"`
+	RotationVirtualStart      time.Time       `json:"rotation_virtual_start"`
+	RotationTurnLengthSeconds int             `json:"rotation_turn_length_seconds"`
+	Users                     []UserReference `json:"users"`
 }
 
 type OverrideSubcycle struct {
@@ -29,7 +29,7 @@ type OverrideSubcycle struct {
 }
 
 type FinalSchedule struct {
-	Name               string            `json:"name"`
+	Name                    string          `json:"name"`
 	RenderedScheduleEntries []ScheduleEntry `json:"rendered_schedule_entries"`
 }
 
@@ -46,17 +46,17 @@ type UserReference struct {
 }
 
 type User struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	Email           string    `json:"email"`
-	Type            string    `json:"type"`
-	Summary         string    `json:"summary"`
-	Description     string    `json:"description"`
-	Role            string    `json:"role"`
-	TimeZone        string    `json:"time_zone"`
-	Color           string    `json:"color"`
-	AvatarURL       string    `json:"avatar_url"`
-	ContactMethods  []ContactMethod `json:"contact_methods,omitempty"`
+	ID             string          `json:"id"`
+	Name           string          `json:"name"`
+	Email          string          `json:"email"`
+	Type           string          `json:"type"`
+	Summary        string          `json:"summary"`
+	Description    string          `json:"description"`
+	Role           string          `json:"role"`
+	TimeZone       string          `json:"time_zone"`
+	Color          string          `json:"color"`
+	AvatarURL      string          `json:"avatar_url"`
+	ContactMethods []ContactMethod `json:"contact_methods,omitempty"`
 }
 
 type ContactMethod struct {
@@ -68,12 +68,12 @@ type ContactMethod struct {
 }
 
 type OnCall struct {
-	User             User            `json:"user"`
-	Schedule         *Schedule       `json:"schedule,omitempty"`
+	User             User              `json:"user"`
+	Schedule         *Schedule         `json:"schedule,omitempty"`
 	EscalationPolicy *EscalationPolicy `json:"escalation_policy,omitempty"`
-	EscalationLevel  int             `json:"escalation_level"`
-	Start            *time.Time      `json:"start"`
-	End              *time.Time      `json:"end"`
+	EscalationLevel  int               `json:"escalation_level"`
+	Start            *time.Time        `json:"start"`
+	End              *time.Time        `json:"end"`
 }
 
 type EscalationPolicy struct {

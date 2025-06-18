@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/mattermost/mattermost-pagerduty-plugin/server/pagerduty"
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/plugin/plugintest"
 	"github.com/mattermost/mattermost/server/public/pluginapi"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mattermost/mattermost-pagerduty-plugin/server/pagerduty"
 )
 
 type mockPluginAPI struct {
@@ -59,7 +60,7 @@ func TestPagerDutyCommand(t *testing.T) {
 	expectedData.AddCommand(schedules)
 	oncall := model.NewAutocompleteData("oncall", "", "Show who's currently on-call")
 	expectedData.AddCommand(oncall)
-	
+
 	env.api.On("RegisterCommand", &model.Command{
 		Trigger:          commandTrigger,
 		AutoComplete:     true,
@@ -97,7 +98,7 @@ func TestPagerDutyCommand(t *testing.T) {
 		}
 		data, _ := json.Marshal(schedulesResp)
 		env.pluginAPI.schedules = data
-		
+
 		args := &model.CommandArgs{
 			Command: "/pagerduty schedules",
 		}
@@ -116,7 +117,7 @@ func TestPagerDutyCommand(t *testing.T) {
 		}
 		data, _ := json.Marshal(schedulesResp)
 		env.pluginAPI.schedules = data
-		
+
 		args := &model.CommandArgs{
 			Command: "/pagerduty schedules",
 		}
@@ -153,7 +154,7 @@ func TestPagerDutyCommand(t *testing.T) {
 		}
 		data, _ := json.Marshal(oncallsResp)
 		env.pluginAPI.oncalls = data
-		
+
 		args := &model.CommandArgs{
 			Command: "/pagerduty oncall",
 		}
@@ -174,7 +175,7 @@ func TestPagerDutyCommand(t *testing.T) {
 		}
 		data, _ := json.Marshal(oncallsResp)
 		env.pluginAPI.oncalls = data
-		
+
 		args := &model.CommandArgs{
 			Command: "/pagerduty oncall",
 		}

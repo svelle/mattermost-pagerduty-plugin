@@ -7,15 +7,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattermost/mattermost-pagerduty-plugin/server/pagerduty"
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/pluginapi"
+
+	"github.com/mattermost/mattermost-pagerduty-plugin/server/pagerduty"
 )
 
 type Handler struct {
-	client      *pluginapi.Client
-	pluginAPI   PluginAPI
-	siteURL     string
+	client    *pluginapi.Client
+	pluginAPI PluginAPI
+	siteURL   string
 }
 
 type Command interface {
@@ -29,7 +30,7 @@ type PluginAPI interface {
 
 const (
 	commandTrigger = "pagerduty"
-	
+
 	subcommandHelp      = "help"
 	subcommandSchedules = "schedules"
 	subcommandOnCall    = "oncall"
@@ -138,7 +139,7 @@ func (h *Handler) executeSchedulesCommand(args *model.CommandArgs) *model.Comman
 	// Build the response text
 	var text strings.Builder
 	text.WriteString("### PagerDuty Schedules\n\n")
-	
+
 	for _, schedule := range response.Schedules {
 		text.WriteString(fmt.Sprintf("**%s**", schedule.Name))
 		if schedule.Description != "" {
@@ -203,27 +204,28 @@ func (h *Handler) executeOnCallCommand(args *model.CommandArgs) *model.CommandRe
 	for _, scheduleName := range scheduleNames {
 		oncalls := oncallsBySchedule[scheduleName]
 		text.WriteString(fmt.Sprintf("**%s**\n", scheduleName))
-		
+
 		for _, oncall := range oncalls {
 			text.WriteString(fmt.Sprintf("• %s", oncall.User.Name))
 			if oncall.User.Email != "" {
 				text.WriteString(fmt.Sprintf(" (%s)", oncall.User.Email))
 			}
-			
+
 			// Show when their shift ends if available
 			if oncall.End != nil {
 				endTime := oncall.End.Local()
 				now := time.Now()
-				
-				if endTime.Day() == now.Day() {
+
+				switch {
+				case endTime.Day() == now.Day():
 					text.WriteString(fmt.Sprintf(" - until %s today", endTime.Format("3:04 PM")))
-				} else if endTime.Day() == now.Add(24*time.Hour).Day() {
+				case endTime.Day() == now.Add(24*time.Hour).Day():
 					text.WriteString(fmt.Sprintf(" - until %s tomorrow", endTime.Format("3:04 PM")))
-				} else {
+				default:
 					text.WriteString(fmt.Sprintf(" - until %s", endTime.Format("Mon 3:04 PM")))
 				}
 			}
-			
+
 			if oncall.EscalationLevel > 0 {
 				text.WriteString(fmt.Sprintf(" _(escalation level %d)_", oncall.EscalationLevel))
 			}
