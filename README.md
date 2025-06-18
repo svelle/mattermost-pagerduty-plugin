@@ -4,7 +4,7 @@
 
 ## Overview
 
-The Mattermost PagerDuty Plugin integrates PagerDuty with Mattermost, allowing teams to view on-call schedules and current on-call users directly within Mattermost. This plugin provides quick access to PagerDuty information through a sidebar interface and slash commands.
+The Mattermost PagerDuty Plugin integrates PagerDuty with Mattermost, allowing teams to view on-call schedules and current on-call users directly within Mattermost. This plugin provides quick access to PagerDuty information through a convenient sidebar interface.
 
 ## Features
 
@@ -24,11 +24,6 @@ The Mattermost PagerDuty Plugin integrates PagerDuty with Mattermost, allowing t
 - **Time Display**: Shows both time and date for clarity (e.g., "Tomorrow at 09:00")
 - **Responsive Design**: Clean layout that works well in the Mattermost sidebar
 - **Theme Support**: Automatically adapts to your Mattermost theme (light/dark)
-
-### Slash Commands
-- `/pagerduty help` - Display available commands and usage
-- `/pagerduty schedules` - List all PagerDuty schedules directly in chat
-- `/pagerduty oncall` - Show who's currently on-call with shift end times
 
 ### Configuration
 - **PagerDuty API Token**: Secure token storage for API authentication
@@ -87,28 +82,6 @@ When you click on a schedule, you'll see:
 - Use the **← back arrow** to return to the schedule list
 - Click **Refresh** to get the latest data
 - Click the same schedule again to refresh its details
-
-### Slash Commands
-
-Quick commands available in any channel:
-
-#### `/pagerduty help`
-Shows available commands and usage instructions.
-
-#### `/pagerduty schedules`
-Lists all PagerDuty schedules with:
-- Schedule names and descriptions
-- Timezone information
-- Quick overview of available schedules
-
-#### `/pagerduty oncall`
-Shows who's currently on-call with:
-- Grouped by schedule
-- User names and email addresses
-- When their shift ends (e.g., "until 5:00 PM today")
-- Escalation levels if applicable
-
-All slash command responses are ephemeral (only visible to you) to avoid cluttering channels.
 
 ## Development
 
