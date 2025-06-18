@@ -1,8 +1,12 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+
 import React from 'react';
-import {render, screen, waitFor, fireEvent} from '@/test-utils';
+
 import PagerDutySidebar from './sidebar';
+
 import client from '@/client/client';
-import {mockTheme} from '@/test-utils';
+import {render, screen, waitFor, fireEvent, mockTheme} from '@/test-utils';
 
 // Mock the client module
 jest.mock('@/client/client');
@@ -12,9 +16,9 @@ const mockClient = client as jest.Mocked<typeof client>;
 jest.mock('./schedule_list', () => ({
     __esModule: true,
     default: ({schedules, onScheduleClick, loading, error}: any) => (
-        <div data-testid="schedule-list">
-            {loading && <div>Loading schedules...</div>}
-            {error && <div>Error: {error}</div>}
+        <div data-testid='schedule-list'>
+            {loading && <div>{'Loading schedules...'}</div>}
+            {error && <div>{'Error: '}{error}</div>}
             {schedules.map((schedule: any) => (
                 <button
                     key={schedule.id}
@@ -31,12 +35,12 @@ jest.mock('./schedule_list', () => ({
 jest.mock('./schedule_details', () => ({
     __esModule: true,
     default: ({schedule, onBack, loading}: any) => (
-        <div data-testid="schedule-details">
-            {loading && <div>Loading details...</div>}
+        <div data-testid='schedule-details'>
+            {loading && <div>{'Loading details...'}</div>}
             {schedule && (
                 <>
                     <h2>{schedule.name}</h2>
-                    <button onClick={onBack}>Back</button>
+                    <button onClick={onBack}>{'Back'}</button>
                 </>
             )}
         </div>
@@ -58,7 +62,7 @@ describe('PagerDutySidebar', () => {
 
         mockClient.getSchedules.mockResolvedValueOnce(mockSchedules);
 
-        render(<PagerDutySidebar theme={mockTheme} />);
+        render(<PagerDutySidebar theme={mockTheme}/>);
 
         // Should show loading state initially
         expect(screen.getByText('Loading schedules...')).toBeInTheDocument();
@@ -75,7 +79,7 @@ describe('PagerDutySidebar', () => {
     it('should handle error when loading schedules fails', async () => {
         mockClient.getSchedules.mockRejectedValueOnce(new Error('API Error'));
 
-        render(<PagerDutySidebar theme={mockTheme} />);
+        render(<PagerDutySidebar theme={mockTheme}/>);
 
         await waitFor(() => {
             expect(screen.getByText('Error: API Error')).toBeInTheDocument();
@@ -98,7 +102,7 @@ describe('PagerDutySidebar', () => {
         mockClient.getSchedules.mockResolvedValueOnce(mockSchedules);
         mockClient.getScheduleDetails.mockResolvedValueOnce(mockScheduleDetails);
 
-        render(<PagerDutySidebar theme={mockTheme} />);
+        render(<PagerDutySidebar theme={mockTheme}/>);
 
         // Wait for schedules to load
         await waitFor(() => {
@@ -114,6 +118,7 @@ describe('PagerDutySidebar', () => {
         // Wait for details to load
         await waitFor(() => {
             expect(screen.getByTestId('schedule-details')).toBeInTheDocument();
+
             // Check that the schedule name appears in the header
             const header = screen.getByRole('heading', {level: 3});
             expect(header).toHaveTextContent('Primary On-Call');
@@ -137,7 +142,7 @@ describe('PagerDutySidebar', () => {
         mockClient.getSchedules.mockResolvedValueOnce(mockSchedules);
         mockClient.getScheduleDetails.mockResolvedValueOnce(mockScheduleDetails);
 
-        render(<PagerDutySidebar theme={mockTheme} />);
+        render(<PagerDutySidebar theme={mockTheme}/>);
 
         // Wait for schedules to load and click one
         await waitFor(() => {
@@ -158,5 +163,4 @@ describe('PagerDutySidebar', () => {
         expect(screen.getByTestId('schedule-list')).toBeInTheDocument();
         expect(screen.queryByTestId('schedule-details')).not.toBeInTheDocument();
     });
-
 });

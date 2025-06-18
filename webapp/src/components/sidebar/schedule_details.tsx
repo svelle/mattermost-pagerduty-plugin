@@ -112,7 +112,7 @@ const ScheduleDetails: React.FC<Props> = ({schedule, onBack, theme, loading}) =>
                                 {entry.user.email}
                             </div>
                             <div style={{fontSize: '12px', color: theme.centerChannelColor, opacity: 0.5, marginTop: '4px'}}>
-                                {new Date(entry.start).toLocaleString()} - {new Date(entry.end).toLocaleString()}
+                                {new Date(entry.start).toLocaleString()}{' - '}{new Date(entry.end).toLocaleString()}
                             </div>
                         </div>
                     </div>

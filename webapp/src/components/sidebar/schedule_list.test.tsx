@@ -1,7 +1,11 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+
 import React from 'react';
-import {render, screen, fireEvent} from '@/test-utils';
+
 import ScheduleList from './schedule_list';
-import {mockTheme} from '@/test-utils';
+
+import {render, screen, fireEvent, mockTheme} from '@/test-utils';
 
 describe('ScheduleList', () => {
     const mockSchedules = [
@@ -33,7 +37,7 @@ describe('ScheduleList', () => {
                 theme={mockTheme}
                 loading={false}
                 error={null}
-            />
+            />,
         );
 
         expect(screen.getByText('2 schedules')).toBeInTheDocument();
@@ -49,7 +53,7 @@ describe('ScheduleList', () => {
                 theme={mockTheme}
                 loading={true}
                 error={null}
-            />
+            />,
         );
 
         expect(screen.getByText('Loading schedules...')).toBeInTheDocument();
@@ -62,8 +66,8 @@ describe('ScheduleList', () => {
                 onScheduleClick={mockOnScheduleClick}
                 theme={mockTheme}
                 loading={false}
-                error="Failed to load schedules"
-            />
+                error='Failed to load schedules'
+            />,
         );
 
         expect(screen.getByText('Error: Failed to load schedules')).toBeInTheDocument();
@@ -77,7 +81,7 @@ describe('ScheduleList', () => {
                 theme={mockTheme}
                 loading={false}
                 error={null}
-            />
+            />,
         );
 
         expect(screen.getByText('No schedules found')).toBeInTheDocument();
@@ -91,12 +95,12 @@ describe('ScheduleList', () => {
                 theme={mockTheme}
                 loading={false}
                 error={null}
-            />
+            />,
         );
 
         const firstSchedule = screen.getByTestId('schedule-SCHED1');
         expect(firstSchedule).toBeInTheDocument();
-        
+
         fireEvent.click(firstSchedule);
         expect(mockOnScheduleClick).toHaveBeenCalledWith('SCHED1');
     });
@@ -109,15 +113,15 @@ describe('ScheduleList', () => {
                 theme={mockTheme}
                 loading={false}
                 error={null}
-            />
+            />,
         );
 
         const container = screen.getByTestId('schedule-SCHED1').parentElement;
         const firstSchedule = screen.getByTestId('schedule-SCHED1');
-        
+
         // Focus the first schedule
         firstSchedule.focus();
-        
+
         // Test Enter key
         fireEvent.keyDown(container!, {key: 'Enter', code: 'Enter'});
         expect(mockOnScheduleClick).toHaveBeenCalledWith('SCHED1');
@@ -131,7 +135,7 @@ describe('ScheduleList', () => {
                 theme={mockTheme}
                 loading={false}
                 error={null}
-            />
+            />,
         );
 
         expect(screen.getByText('2 schedules')).toBeInTheDocument();

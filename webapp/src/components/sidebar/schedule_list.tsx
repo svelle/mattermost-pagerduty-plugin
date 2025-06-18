@@ -16,7 +16,7 @@ interface Props {
 
 const ScheduleList: React.FC<Props> = ({schedules, onScheduleClick, theme, loading, error}) => {
     const [focusedIndex, setFocusedIndex] = useState(-1);
-    const scheduleRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const scheduleRefs = useRef<Array<HTMLDivElement | null>>([]);
 
     useEffect(() => {
         // Reset refs array when schedules change
@@ -65,14 +65,19 @@ const ScheduleList: React.FC<Props> = ({schedules, onScheduleClick, theme, loadi
     }
 
     return (
-        <div className='schedule-list' onKeyDown={handleKeyDown}>
+        <div
+            className='schedule-list'
+            onKeyDown={handleKeyDown}
+        >
             <div style={{marginBottom: '12px', color: theme.centerChannelColor, fontSize: '14px', opacity: 0.7}}>
                 {`${schedules.length} schedule${schedules.length === 1 ? '' : 's'}`}
             </div>
             {schedules.map((schedule, index) => (
                 <div
                     key={schedule.id}
-                    ref={(el) => { scheduleRefs.current[index] = el; }}
+                    ref={(el) => {
+                        scheduleRefs.current[index] = el;
+                    }}
                     data-testid={`schedule-${schedule.id}`}
                     tabIndex={0}
                     onClick={() => onScheduleClick(schedule.id)}

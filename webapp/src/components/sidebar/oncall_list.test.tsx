@@ -1,7 +1,11 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+
 import React from 'react';
-import {render, screen} from '@/test-utils';
+
 import OnCallList from './oncall_list';
-import {mockTheme} from '@/test-utils';
+
+import {render, screen, mockTheme} from '@/test-utils';
 
 describe('OnCallList', () => {
     const mockOnCalls = [
@@ -44,7 +48,7 @@ describe('OnCallList', () => {
                 theme={mockTheme}
                 loading={false}
                 error={null}
-            />
+            />,
         );
 
         expect(screen.getByText('Currently On-Call')).toBeInTheDocument();
@@ -59,7 +63,7 @@ describe('OnCallList', () => {
                 theme={mockTheme}
                 loading={true}
                 error={null}
-            />
+            />,
         );
 
         expect(screen.getByText('Loading on-call users...')).toBeInTheDocument();
@@ -71,8 +75,8 @@ describe('OnCallList', () => {
                 onCalls={[]}
                 theme={mockTheme}
                 loading={false}
-                error="Failed to load on-call users"
-            />
+                error='Failed to load on-call users'
+            />,
         );
 
         expect(screen.getByText('Error: Failed to load on-call users')).toBeInTheDocument();
@@ -85,7 +89,7 @@ describe('OnCallList', () => {
                 theme={mockTheme}
                 loading={false}
                 error={null}
-            />
+            />,
         );
 
         expect(screen.getByText('No one is currently on-call')).toBeInTheDocument();
@@ -98,7 +102,7 @@ describe('OnCallList', () => {
                 theme={mockTheme}
                 loading={false}
                 error={null}
-            />
+            />,
         );
 
         expect(screen.getByText('Primary On-Call')).toBeInTheDocument();
@@ -112,7 +116,7 @@ describe('OnCallList', () => {
                 theme={mockTheme}
                 loading={false}
                 error={null}
-            />
+            />,
         );
 
         expect(screen.getByText('Level 1')).toBeInTheDocument();
@@ -126,7 +130,7 @@ describe('OnCallList', () => {
                 theme={mockTheme}
                 loading={false}
                 error={null}
-            />
+            />,
         );
 
         expect(screen.getByText('john@example.com')).toBeInTheDocument();
@@ -140,7 +144,7 @@ describe('OnCallList', () => {
                 theme={mockTheme}
                 loading={false}
                 error={null}
-            />
+            />,
         );
 
         const avatars = screen.getAllByRole('img');
@@ -163,7 +167,7 @@ describe('OnCallList', () => {
                 theme={mockTheme}
                 loading={false}
                 error={null}
-            />
+            />,
         );
 
         expect(screen.getByText('John Doe')).toBeInTheDocument();

@@ -1,3 +1,6 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+
 import {Client} from './client';
 
 // Mock fetch globally
@@ -154,7 +157,7 @@ describe('Client', () => {
                 ok: false,
                 json: async () => ({message: 'Schedule ID is required'}),
             });
-            
+
             await expect(client.getScheduleDetails('')).rejects.toThrow('Schedule ID is required');
         });
     });

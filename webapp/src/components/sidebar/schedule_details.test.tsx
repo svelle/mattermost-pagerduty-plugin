@@ -1,7 +1,11 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+
 import React from 'react';
-import {render, screen, fireEvent} from '@/test-utils';
+
 import ScheduleDetails from './schedule_details';
-import {mockTheme} from '@/test-utils';
+
+import {render, screen, fireEvent, mockTheme} from '@/test-utils';
 
 describe('ScheduleDetails', () => {
     const mockSchedule = {
@@ -50,7 +54,7 @@ describe('ScheduleDetails', () => {
                 onBack={mockOnBack}
                 theme={mockTheme}
                 loading={false}
-            />
+            />,
         );
 
         expect(screen.getByText('Primary On-Call')).toBeInTheDocument();
@@ -65,7 +69,7 @@ describe('ScheduleDetails', () => {
                 onBack={mockOnBack}
                 theme={mockTheme}
                 loading={true}
-            />
+            />,
         );
 
         expect(screen.getByText('Loading schedule details...')).toBeInTheDocument();
@@ -78,7 +82,7 @@ describe('ScheduleDetails', () => {
                 onBack={mockOnBack}
                 theme={mockTheme}
                 loading={false}
-            />
+            />,
         );
 
         expect(screen.getByText('John Doe')).toBeInTheDocument();
@@ -92,7 +96,7 @@ describe('ScheduleDetails', () => {
                 onBack={mockOnBack}
                 theme={mockTheme}
                 loading={false}
-            />
+            />,
         );
 
         const backButton = screen.getByRole('button', {name: /back/i});
@@ -116,7 +120,7 @@ describe('ScheduleDetails', () => {
                 onBack={mockOnBack}
                 theme={mockTheme}
                 loading={false}
-            />
+            />,
         );
 
         expect(screen.getByText('No on-call entries for this schedule')).toBeInTheDocument();
@@ -129,7 +133,7 @@ describe('ScheduleDetails', () => {
                 onBack={mockOnBack}
                 theme={mockTheme}
                 loading={false}
-            />
+            />,
         );
 
         // Check that dates are being displayed (actual format depends on implementation)
@@ -149,7 +153,7 @@ describe('ScheduleDetails', () => {
                 onBack={mockOnBack}
                 theme={mockTheme}
                 loading={false}
-            />
+            />,
         );
 
         expect(screen.getByText('No on-call schedule available')).toBeInTheDocument();
@@ -162,7 +166,7 @@ describe('ScheduleDetails', () => {
                 onBack={mockOnBack}
                 theme={mockTheme}
                 loading={false}
-            />
+            />,
         );
 
         const avatars = screen.getAllByRole('img');
