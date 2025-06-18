@@ -1,1 +1,20 @@
-{}
+{
+    "pagerduty.sidebar.title": "PagerDuty",
+    "pagerduty.sidebar.refresh": "Refresh",
+    "pagerduty.sidebar.loading": "Loading PagerDuty data...",
+    "pagerduty.sidebar.error": "Error: {error}",
+    "pagerduty.sidebar.retry": "Retry",
+    "pagerduty.sidebar.oncall.title": "Currently On-Call",
+    "pagerduty.sidebar.oncall.empty": "No one is currently on-call",
+    "pagerduty.sidebar.schedules.title": "Schedules",
+    "pagerduty.sidebar.schedules.empty": "No schedules found",
+    "pagerduty.command.help.title": "PagerDuty Plugin Commands",
+    "pagerduty.command.help.description": "* **/pagerduty help** - Show this help message\n* **/pagerduty schedules** - List all PagerDuty schedules\n* **/pagerduty oncall** - Show who's currently on-call\n\nYou can also click the PagerDuty icon in the channel header to open the sidebar view.",
+    "pagerduty.command.schedules.title": "PagerDuty Schedules",
+    "pagerduty.command.schedules.message": "Open the PagerDuty sidebar for a detailed view of all schedules.",
+    "pagerduty.command.oncall.title": "Current On-Call Users",
+    "pagerduty.command.oncall.message": "Open the PagerDuty sidebar for a detailed view of who's on-call.",
+    "pagerduty.error.config.invalid": "PagerDuty plugin is not configured",
+    "pagerduty.error.schedules.failed": "Failed to retrieve schedules",
+    "pagerduty.error.oncalls.failed": "Failed to retrieve on-call users"
+}

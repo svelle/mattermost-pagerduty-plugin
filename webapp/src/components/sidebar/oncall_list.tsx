@@ -1,0 +1,97 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+
+import React from 'react';
+
+import type {OnCall} from '@/types/pagerduty';
+import type {Theme} from '@/types/theme';
+
+interface Props {
+    oncalls: OnCall[];
+    theme: Theme;
+}
+
+const OnCallList: React.FC<Props> = ({oncalls, theme}) => {
+    if (oncalls.length === 0) {
+        return (
+            <div style={{color: theme.centerChannelColor, opacity: 0.7, fontSize: '14px'}}>
+                {'No one is currently on-call'}
+            </div>
+        );
+    }
+
+    // Group on-calls by schedule
+    const oncallsBySchedule = oncalls.reduce((acc, oncall) => {
+        const scheduleName = oncall.schedule?.name || 'Unknown Schedule';
+        if (!acc[scheduleName]) {
+            acc[scheduleName] = [];
+        }
+        acc[scheduleName].push(oncall);
+        return acc;
+    }, {} as Record<string, OnCall[]>);
+
+    return (
+        <div className='oncall-list'>
+            {Object.entries(oncallsBySchedule).map(([scheduleName, scheduleOncalls]) => (
+                <div
+                    key={scheduleName}
+                    style={{marginBottom: '16px'}}
+                >
+                    <div
+                        style={{
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            color: theme.centerChannelColor,
+                            opacity: 0.8,
+                            marginBottom: '8px',
+                        }}
+                    >
+                        {scheduleName}
+                    </div>
+                    {scheduleOncalls.map((oncall, index) => (
+                        <div
+                            key={`${oncall.user.id}-${index}`}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '8px',
+                                backgroundColor: theme.centerChannelBg,
+                                border: `1px solid ${theme.centerChannelColor}20`,
+                                borderRadius: '4px',
+                                marginBottom: '8px',
+                            }}
+                        >
+                            {oncall.user.avatar_url && (
+                                <img
+                                    src={oncall.user.avatar_url}
+                                    alt={oncall.user.name}
+                                    style={{
+                                        width: '32px',
+                                        height: '32px',
+                                        borderRadius: '50%',
+                                        marginRight: '12px',
+                                    }}
+                                />
+                            )}
+                            <div style={{flex: 1}}>
+                                <div style={{fontWeight: 500, color: theme.centerChannelColor}}>
+                                    {oncall.user.name}
+                                </div>
+                                <div style={{fontSize: '12px', color: theme.centerChannelColor, opacity: 0.7}}>
+                                    {oncall.user.email}
+                                </div>
+                                {oncall.escalation_level > 0 && (
+                                    <div style={{fontSize: '11px', color: theme.centerChannelColor, opacity: 0.5}}>
+                                        {'Escalation level: '}{oncall.escalation_level}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ))}
+        </div>
+    );
+};
+
+export default OnCallList;

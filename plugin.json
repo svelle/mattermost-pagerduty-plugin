@@ -1,10 +1,10 @@
 {
-    "id": "com.mattermost.plugin-starter-template",
-    "name": "Plugin Starter Template",
-    "description": "This plugin serves as a starting point for writing a Mattermost plugin.",
-    "homepage_url": "https://github.com/mattermost/mattermost-plugin-starter-template",
-    "support_url": "https://github.com/mattermost/mattermost-plugin-starter-template/issues",
-    "icon_path": "assets/starter-template-icon.svg",
+    "id": "com.mattermost.pagerduty-plugin",
+    "name": "Mattermost PagerDuty Plugin",
+    "description": "PagerDuty integration for Mattermost - View on-call schedules and current on-call users directly within Mattermost.",
+    "homepage_url": "https://github.com/mattermost/mattermost-pagerduty-plugin",
+    "support_url": "https://github.com/mattermost/mattermost-pagerduty-plugin/issues",
+    "icon_path": "assets/pagerduty-icon.svg",
     "min_server_version": "6.2.1",
     "server": {
         "executables": {
@@ -19,8 +19,26 @@
         "bundle_path": "webapp/dist/main.js"
     },
     "settings_schema": {
-        "header": "",
-        "footer": "",
-        "settings": []
+        "header": "Configure your PagerDuty integration settings below.",
+        "footer": "Need help? Visit our [documentation](https://github.com/mattermost/mattermost-pagerduty-plugin#configuration).",
+        "settings": [
+            {
+                "key": "APIToken",
+                "display_name": "PagerDuty API Token",
+                "type": "text",
+                "help_text": "The API token for authenticating with PagerDuty. You can generate one from your PagerDuty account under Configuration > API Access Keys.",
+                "placeholder": "pdus+_xxxxxxxxxxxxxxxxxx",
+                "default": "",
+                "secret": true
+            },
+            {
+                "key": "APIBaseURL",
+                "display_name": "PagerDuty API Base URL",
+                "type": "text",
+                "help_text": "The base URL for PagerDuty API. Leave default unless using a custom PagerDuty instance.",
+                "placeholder": "https://api.pagerduty.com",
+                "default": "https://api.pagerduty.com"
+            }
+        ]
     }
 }

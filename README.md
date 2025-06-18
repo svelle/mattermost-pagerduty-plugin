@@ -1,218 +1,212 @@
-# Plugin Starter Template
+# Mattermost PagerDuty Plugin
 
-[![Build Status](https://github.com/mattermost/mattermost-plugin-starter-template/actions/workflows/ci.yml/badge.svg)](https://github.com/mattermost/mattermost-plugin-starter-template/actions/workflows/ci.yml)
-[![E2E Status](https://github.com/mattermost/mattermost-plugin-starter-template/actions/workflows/e2e.yml/badge.svg)](https://github.com/mattermost/mattermost-plugin-starter-template/actions/workflows/e2e.yml)
+[![Build Status](https://github.com/mattermost/mattermost-pagerduty-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/mattermost/mattermost-pagerduty-plugin/actions/workflows/ci.yml)
 
-This plugin serves as a starting point for writing a Mattermost plugin. Feel free to base your own plugin off this repository.
+## Overview
 
-To learn more about plugins, see [our plugin documentation](https://developers.mattermost.com/extend/plugins/).
+The Mattermost PagerDuty Plugin integrates PagerDuty with Mattermost, allowing teams to view on-call schedules and current on-call users directly within Mattermost. This plugin provides quick access to PagerDuty information through a sidebar interface and slash commands.
 
-This template requires node v16 and npm v8. You can download and install nvm to manage your node versions by following the instructions [here](https://github.com/nvm-sh/nvm). Once you've setup the project simply run `nvm i` within the root folder to use the suggested version of node.
+## Features
 
-## Getting Started
-Use GitHub's template feature to make a copy of this repository by clicking the "Use this template" button.
+### Core Functionality
+- **Schedule Browser**: View all PagerDuty schedules in a clean, organized list
+- **Timeline View**: Click any schedule to see a detailed 24-hour timeline showing:
+  - Who's currently on-call (highlighted with special styling)
+  - Upcoming shifts with countdown timers
+  - Smooth transitions between on-call personnel
+- **Right-Hand Sidebar**: Dedicated sidebar accessible via channel header button
+- **Real-time Data**: Always shows current information - no background syncing needed
+- **Secure Configuration**: API tokens are stored securely and never exposed in the UI
 
-Alternatively shallow clone the repository matching your plugin name:
-```
-git clone --depth 1 https://github.com/mattermost/mattermost-plugin-starter-template com.example.my-plugin
-```
+### User Interface
+- **Intuitive Navigation**: Easy back button to switch between schedule list and details
+- **Visual Indicators**: Current on-call person prominently displayed with colored background
+- **Time Display**: Shows both time and date for clarity (e.g., "Tomorrow at 09:00")
+- **Responsive Design**: Clean layout that works well in the Mattermost sidebar
+- **Theme Support**: Automatically adapts to your Mattermost theme (light/dark)
 
-Note that this project uses [Go modules](https://github.com/golang/go/wiki/Modules). Be sure to locate the project outside of `$GOPATH`.
+### Slash Commands
+- `/pagerduty help` - Display available commands and usage
+- `/pagerduty schedules` - List all PagerDuty schedules directly in chat
+- `/pagerduty oncall` - Show who's currently on-call with shift end times
 
-Edit the following files:
-1. `plugin.json` with your `id`, `name`, and `description`:
-```json
-{
-    "id": "com.example.my-plugin",
-    "name": "My Plugin",
-    "description": "A plugin to enhance Mattermost."
-}
-```
+### Configuration
+- **PagerDuty API Token**: Secure token storage for API authentication
+- **Custom API URL**: Support for self-hosted or regional PagerDuty instances
 
-2. `go.mod` with your Go module path, following the `<hosting-site>/<repository>/<module>` convention:
-```
-module github.com/example/my-plugin
-```
+## Requirements
 
-3. `.golangci.yml` with your Go module path:
-```yml
-linters-settings:
-  # [...]
-  goimports:
-    local-prefixes: github.com/example/my-plugin
-```
+- Mattermost Server v6.2.1 or higher
+- PagerDuty account with API access
+- PagerDuty API token
 
-Build your plugin:
-```
-make
-```
+## Installation
 
-This will produce a single plugin file (with support for multiple architectures) for upload to your Mattermost server:
+1. Download the latest plugin file from the [releases page](https://github.com/mattermost/mattermost-pagerduty-plugin/releases)
+2. In Mattermost, go to **System Console > Plugins > Plugin Management**
+3. Upload the plugin file
+4. Enable the plugin
 
-```
-dist/com.example.my-plugin.tar.gz
-```
+## Configuration
+
+After installing the plugin, configure it in **System Console > Plugins > PagerDuty**:
+
+1. **PagerDuty API Token**: Enter your PagerDuty API token
+   - Generate a token in PagerDuty: **Configuration > API Access Keys**
+   - Ensure the token has read access to schedules and users
+
+2. **PagerDuty API Base URL**: (Optional) Customize if using a non-standard PagerDuty instance
+   - Default: `https://api.pagerduty.com`
+
+## Usage
+
+### Opening the Sidebar
+
+1. Look for the PagerDuty icon in the channel header (green icon with "P")
+2. Click it to open the right-hand sidebar
+3. The sidebar will load and display all your PagerDuty schedules
+
+### Viewing Schedules
+
+1. The main view shows all available schedules with:
+   - Schedule name
+   - Description (if available)
+   - Timezone information
+2. Click on any schedule to see detailed on-call information
+
+### Timeline View
+
+When you click on a schedule, you'll see:
+- **Current On-Call**: Prominently displayed at the top with a blue background
+- **Next 24 Hours**: A timeline showing all upcoming on-call transitions
+- **Time Until Next**: Countdown showing when the next person goes on-call
+- **Visual Timeline**: Color-coded entries with the current on-call highlighted
+
+### Navigation
+
+- Use the **← back arrow** to return to the schedule list
+- Click **Refresh** to get the latest data
+- Click the same schedule again to refresh its details
+
+### Slash Commands
+
+Quick commands available in any channel:
+
+#### `/pagerduty help`
+Shows available commands and usage instructions.
+
+#### `/pagerduty schedules`
+Lists all PagerDuty schedules with:
+- Schedule names and descriptions
+- Timezone information
+- Quick overview of available schedules
+
+#### `/pagerduty oncall`
+Shows who's currently on-call with:
+- Grouped by schedule
+- User names and email addresses
+- When their shift ends (e.g., "until 5:00 PM today")
+- Escalation levels if applicable
+
+All slash command responses are ephemeral (only visible to you) to avoid cluttering channels.
 
 ## Development
 
-To avoid having to manually install your plugin, build and deploy your plugin using one of the following options. In order for the below options to work, you must first enable plugin uploads via your config.json or API and restart Mattermost.
+### Prerequisites
 
-```json
-    "PluginSettings" : {
-        ...
-        "EnableUploads" : true
-    }
-```
+- Go 1.22 or higher
+- Node.js 16 or higher
+- npm 8 or higher
 
-### Development guidance 
+### Building the Plugin
 
-1. Fewer packages is better: default to the main package unless there's good reason for a new package.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/mattermost/mattermost-pagerduty-plugin.git
+   cd mattermost-pagerduty-plugin
+   ```
 
-2. Coupling implies same package: don't jump through hoops to break apart code that's naturally coupled.
+2. Build the plugin:
+   ```bash
+   make
+   ```
 
-3. New package for a new interface: a classic example is the sqlstore with layers for monitoring performance, caching and mocking.
+This will create the plugin file at `dist/com.mattermost.pagerduty-plugin.tar.gz`.
 
-4. New package for upstream integration: a discrete client package for interfacing with a 3rd party is often a great place to break out into a new package
+### Local Development
 
-### Modifying the server boilerplate
+For local development with automatic deployment:
 
-The server code comes with some boilerplate for creating an api, using slash commands, accessing the kvstore and using the cluster package for jobs. 
-
-#### Api
-
-api.go implements the ServeHTTP hook which allows the plugin to implement the http.Handler interface. Requests destined for the `/plugins/{id}` path will be routed to the plugin. This file also contains a sample `HelloWorld` endpoint that is tested in plugin_test.go.
-
-#### Command package
-
-This package contains the boilerplate for adding a slash command and an instance of it is created in the `OnActivate` hook in plugin.go. If you don't need it you can delete the package and remove any reference to `commandClient` in plugin.go. The package also contains an example of how to create a mock for testing.
-
-#### KVStore package
-
-This is a central place for you to access the KVStore methods that are available in the `pluginapi.Client`. The package contains an interface for you to define your methods that will wrap the KVStore methods. An instance of the KVStore is created in the `OnActivate` hook.
-
-### Deploying with Local Mode
-
-If your Mattermost server is running locally, you can enable [local mode](https://docs.mattermost.com/administration/mmctl-cli-tool.html#local-mode) to streamline deploying your plugin. Edit your server configuration as follows:
-
-```json
-{
-    "ServiceSettings": {
-        ...
-        "EnableLocalMode": true,
-        "LocalModeSocketLocation": "/var/tmp/mattermost_local.socket"
-    },
-}
-```
-
-and then deploy your plugin:
-```
-make deploy
-```
-
-You may also customize the Unix socket path:
-```bash
-export MM_LOCALSOCKETPATH=/var/tmp/alternate_local.socket
-make deploy
-```
-
-If developing a plugin with a webapp, watch for changes and deploy those automatically:
 ```bash
 export MM_SERVICESETTINGS_SITEURL=http://localhost:8065
-export MM_ADMIN_TOKEN=j44acwd8obn78cdcx7koid4jkr
+export MM_ADMIN_TOKEN=your-admin-token
+make deploy
+```
+
+To watch for changes and auto-deploy:
+
+```bash
 make watch
 ```
 
-### Deploying with credentials
+## Future Enhancements
 
-Alternatively, you can authenticate with the server's API with credentials:
-```bash
-export MM_SERVICESETTINGS_SITEURL=http://localhost:8065
-export MM_ADMIN_USERNAME=admin
-export MM_ADMIN_PASSWORD=password
-make deploy
-```
+Here's a list of nice-to-have features that could enhance the PagerDuty plugin:
 
-or with a [personal access token](https://docs.mattermost.com/developer/personal-access-tokens.html):
-```bash
-export MM_SERVICESETTINGS_SITEURL=http://localhost:8065
-export MM_ADMIN_TOKEN=j44acwd8obn78cdcx7koid4jkr
-make deploy
-```
+### 🔔 Notifications & Alerts
+- **On-call transition notifications**: Notify users when they're about to go on-call (configurable advance notice)
+- **Schedule change alerts**: Notify when someone's on-call schedule is modified
+- **Incident notifications**: Real-time PagerDuty incident alerts in Mattermost channels
+- **Override notifications**: Alert when schedule overrides are created
 
-### Releasing new versions
+### 📅 Schedule Management
+- **Schedule overrides**: Create temporary schedule overrides directly from Mattermost
+- **Shift swapping**: Request and approve shift swaps between team members
+- **Multi-schedule view**: View multiple schedules side-by-side for coordination
+- **Calendar export**: Export on-call schedules to iCal/Google Calendar format
+- **Historical view**: View past on-call schedules and coverage
 
-The version of a plugin is determined at compile time, automatically populating a `version` field in the [plugin manifest](plugin.json):
-* If the current commit matches a tag, the version will match after stripping any leading `v`, e.g. `1.3.1`.
-* Otherwise, the version will combine the nearest tag with `git rev-parse --short HEAD`, e.g. `1.3.1+d06e53e1`.
-* If there is no version tag, an empty version will be combined with the short hash, e.g. `0.0.0+76081421`.
+### 🎯 Enhanced Features
+- **User profiles**: Click on users to see their contact info and current status
+- **Team filtering**: Filter schedules by team or service
+- **Search functionality**: Search for specific users or schedules
+- **Timezone support**: Show schedules in user's local timezone with conversion
+- **Mobile optimization**: Responsive design for mobile Mattermost apps
 
-To disable this behaviour, manually populate and maintain the `version` field.
+### 🤖 Automation & Integration
+- **Incident response**: Create Mattermost channels automatically for PagerDuty incidents
+- **Status sync**: Sync on-call status to Mattermost user status
+- **Escalation policies**: View and understand escalation policies
+- **Service dependencies**: Visualize service dependencies and their on-call teams
+- **Slack-style reminders**: Set reminders for on-call handoffs
 
-## How to Release
+### 📊 Analytics & Reporting
+- **On-call metrics**: Time spent on-call, incident load per person
+- **Coverage reports**: Identify gaps in on-call coverage
+- **Rotation fairness**: Ensure equal distribution of on-call duties
+- **Custom dashboards**: Build team-specific on-call dashboards
 
-To trigger a release, follow these steps:
+### 🔧 Administrative Features
+- **Bulk configuration**: Configure multiple schedules at once
+- **Role-based access**: Restrict who can view certain schedules
+- **Audit logging**: Track who viewed or modified schedule information
+- **Backup schedules**: Automatic backup of schedule configurations
 
-1. **For Patch Release:** Run the following command:
-    ```
-    make patch
-    ```
-   This will release a patch change.
+### 🎨 User Experience
+- **Dark mode optimization**: Better contrast and styling for dark themes
+- **Customizable views**: Save preferred schedule views and filters
+- **Keyboard shortcuts**: Navigate schedules quickly with keyboard commands
+- **Rich schedule details**: Show more context like team descriptions, runbooks
+- **Presence indicators**: Show if on-call person is online in Mattermost
 
-2. **For Minor Release:** Run the following command:
-    ```
-    make minor
-    ```
-   This will release a minor change.
+## Contributing
 
-3. **For Major Release:** Run the following command:
-    ```
-    make major
-    ```
-   This will release a major change.
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting PRs.
 
-4. **For Patch Release Candidate (RC):** Run the following command:
-    ```
-    make patch-rc
-    ```
-   This will release a patch release candidate.
+## Security
 
-5. **For Minor Release Candidate (RC):** Run the following command:
-    ```
-    make minor-rc
-    ```
-   This will release a minor release candidate.
+If you discover a security vulnerability, please email security@mattermost.com instead of using the issue tracker.
 
-6. **For Major Release Candidate (RC):** Run the following command:
-    ```
-    make major-rc
-    ```
-   This will release a major release candidate.
+## License
 
-## Q&A
-
-### How do I make a server-only or web app-only plugin?
-
-Simply delete the `server` or `webapp` folders and remove the corresponding sections from `plugin.json`. The build scripts will skip the missing portions automatically.
-
-### How do I include assets in the plugin bundle?
-
-Place them into the `assets` directory. To use an asset at runtime, build the path to your asset and open as a regular file:
-
-```go
-bundlePath, err := p.API.GetBundlePath()
-if err != nil {
-    return errors.Wrap(err, "failed to get bundle path")
-}
-
-profileImage, err := ioutil.ReadFile(filepath.Join(bundlePath, "assets", "profile_image.png"))
-if err != nil {
-    return errors.Wrap(err, "failed to read profile image")
-}
-
-if appErr := p.API.SetProfileImage(userID, profileImage); appErr != nil {
-    return errors.Wrap(err, "failed to set profile image")
-}
-```
-
-### How do I build the plugin with unminified JavaScript?
-Setting the `MM_DEBUG` environment variable will invoke the debug builds. The simplist way to do this is to simply include this variable in your calls to `make` (e.g. `make dist MM_DEBUG=1`).
+This plugin is licensed under the [Apache License 2.0](LICENSE).
