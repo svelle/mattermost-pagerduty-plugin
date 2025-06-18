@@ -1,4 +1,4 @@
-module github.com/mattermost/mattermost-pagerduty-plugin
+module github.com/svelle/mattermost-pagerduty-plugin
 
 go 1.22.0
 

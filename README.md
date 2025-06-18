@@ -1,6 +1,6 @@
 # Mattermost PagerDuty Plugin
 
-[![Build Status](https://github.com/mattermost/mattermost-pagerduty-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/mattermost/mattermost-pagerduty-plugin/actions/workflows/ci.yml)
+[![Build Status](https://github.com/svelle/mattermost-pagerduty-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/svelle/mattermost-pagerduty-plugin/actions/workflows/ci.yml)
 
 ## Overview
 
@@ -42,7 +42,7 @@ The Mattermost PagerDuty Plugin integrates PagerDuty with Mattermost, allowing t
 
 ## Installation
 
-1. Download the latest plugin file from the [releases page](https://github.com/mattermost/mattermost-pagerduty-plugin/releases)
+1. Download the latest plugin file from the [releases page](https://github.com/svelle/mattermost-pagerduty-plugin/releases)
 2. In Mattermost, go to **System Console > Plugins > Plugin Management**
 3. Upload the plugin file
 4. Enable the plugin
@@ -122,7 +122,7 @@ All slash command responses are ephemeral (only visible to you) to avoid clutter
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/mattermost/mattermost-pagerduty-plugin.git
+   git clone https://github.com/svelle/mattermost-pagerduty-plugin.git
    cd mattermost-pagerduty-plugin
    ```
 
@@ -131,7 +131,7 @@ All slash command responses are ephemeral (only visible to you) to avoid clutter
    make
    ```
 
-This will create the plugin file at `dist/com.mattermost.pagerduty-plugin.tar.gz`.
+This will create the plugin file at `dist/com.svelle.pagerduty-plugin.tar.gz`.
 
 ### Local Development
 
