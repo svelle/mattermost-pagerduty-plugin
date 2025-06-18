@@ -10,7 +10,7 @@ import (
 
 func (p *Plugin) handleGetSchedules(w http.ResponseWriter, r *http.Request) {
 	p.client.Log.Debug("handleGetSchedules called", "user_id", r.Header.Get("Mattermost-User-ID"))
-	
+
 	config := p.getConfiguration()
 	if err := config.IsValid(); err != nil {
 		p.client.Log.Warn("Plugin configuration invalid", "error", err)
@@ -45,7 +45,7 @@ func (p *Plugin) handleGetSchedules(w http.ResponseWriter, r *http.Request) {
 
 func (p *Plugin) handleGetOnCalls(w http.ResponseWriter, r *http.Request) {
 	p.client.Log.Debug("handleGetOnCalls called", "user_id", r.Header.Get("Mattermost-User-ID"))
-	
+
 	config := p.getConfiguration()
 	if err := config.IsValid(); err != nil {
 		p.client.Log.Warn("Plugin configuration invalid", "error", err)
@@ -90,7 +90,7 @@ func (p *Plugin) handleGetOnCalls(w http.ResponseWriter, r *http.Request) {
 
 func (p *Plugin) handleGetScheduleDetails(w http.ResponseWriter, r *http.Request) {
 	p.client.Log.Debug("handleGetScheduleDetails called", "user_id", r.Header.Get("Mattermost-User-ID"))
-	
+
 	config := p.getConfiguration()
 	if err := config.IsValid(); err != nil {
 		p.client.Log.Warn("Plugin configuration invalid", "error", err)
