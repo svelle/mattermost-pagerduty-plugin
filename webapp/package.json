@@ -26,6 +26,7 @@
     "@mattermost/eslint-plugin": "1.1.0-0",
     "@mattermost/types": "10.8.0",
     "@testing-library/jest-dom": "5.16.1",
+    "@testing-library/react": "12.1.2",
     "@types/babel__core": "7.20.5",
     "@types/babel__template": "7.4.4",
     "@types/enzyme": "3.10.11",
@@ -54,6 +55,7 @@
     "jest": "27.4.7",
     "jest-canvas-mock": "2.3.1",
     "jest-junit": "13.0.0",
+    "react-dom": "17.0.2",
     "sass": "1.52.3",
     "sass-loader": "13.0.0",
     "style-loader": "3.3.1",
@@ -75,6 +77,7 @@
     }
   },
   "jest": {
+    "testEnvironment": "jsdom",
     "snapshotSerializers": [
       "<rootDir>/node_modules/enzyme-to-json/serializer"
     ],
@@ -84,7 +87,10 @@
     ],
     "clearMocks": true,
     "collectCoverageFrom": [
-      "src/**/*.{js,jsx}"
+      "src/**/*.{js,jsx,ts,tsx}",
+      "!src/**/*.d.ts",
+      "!src/**/*.test.{js,jsx,ts,tsx}",
+      "!src/test-utils.tsx"
     ],
     "coverageReporters": [
       "lcov",
@@ -94,7 +100,8 @@
       "^.+\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "identity-obj-proxy",
       "^.+\\.(css|less|scss)$": "identity-obj-proxy",
       "^.*i18n.*\\.(json)$": "<rootDir>/tests/i18n_mock.json",
-      "^bundle-loader\\?lazy\\!(.*)$": "$1"
+      "^bundle-loader\\?lazy\\!(.*)$": "$1",
+      "^@/(.*)$": "<rootDir>/src/$1"
     },
     "moduleDirectories": [
       "",

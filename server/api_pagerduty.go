@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mattermost/mattermost-pagerduty-plugin/server/pagerduty"
+	"github.com/svelle/mattermost-pagerduty-plugin/server/pagerduty"
 )
 
 func (p *Plugin) handleGetSchedules(w http.ResponseWriter, r *http.Request) {
@@ -22,7 +22,7 @@ func (p *Plugin) handleGetSchedules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := pagerduty.NewClient(config.APIToken, config.APIBaseURL)
+	client := p.createPagerDutyClient(config.APIToken, config.APIBaseURL)
 	p.client.Log.Debug("Fetching schedules from PagerDuty API", "base_url", config.APIBaseURL)
 
 	schedules, err := client.GetSchedules(100, 0)
@@ -57,7 +57,7 @@ func (p *Plugin) handleGetOnCalls(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := pagerduty.NewClient(config.APIToken, config.APIBaseURL)
+	client := p.createPagerDutyClient(config.APIToken, config.APIBaseURL)
 
 	scheduleID := r.URL.Query().Get("schedule_id")
 	var oncalls *pagerduty.OnCallsResponse
@@ -113,7 +113,7 @@ func (p *Plugin) handleGetScheduleDetails(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	client := pagerduty.NewClient(config.APIToken, config.APIBaseURL)
+	client := p.createPagerDutyClient(config.APIToken, config.APIBaseURL)
 
 	// Get schedule with the next 7 days of coverage
 	now := time.Now()
@@ -131,7 +131,7 @@ func (p *Plugin) handleGetScheduleDetails(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	p.client.Log.Info("Successfully retrieved schedule details", "schedule_id", scheduleID, "name", schedule.Name)
+	p.client.Log.Info("Successfully retrieved schedule details", "schedule_id", scheduleID, "name", schedule.Schedule.Name)
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(schedule); err != nil {
 		p.client.Log.Error("Failed to encode schedule response", "error", err.Error())

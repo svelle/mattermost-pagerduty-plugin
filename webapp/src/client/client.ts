@@ -3,7 +3,7 @@
 
 import manifest from '@/manifest';
 
-class PagerDutyClient {
+export class Client {
     private baseUrl: string;
 
     constructor() {
@@ -65,4 +65,5 @@ class PagerDutyClient {
     }
 }
 
-export default new PagerDutyClient();
+const client = new Client();
+export default client;

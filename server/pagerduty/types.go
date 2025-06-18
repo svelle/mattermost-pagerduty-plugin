@@ -29,8 +29,8 @@ type OverrideSubcycle struct {
 }
 
 type FinalSchedule struct {
-	Name                    string          `json:"name"`
-	RenderedScheduleEntries []ScheduleEntry `json:"rendered_schedule_entries"`
+	Name                    string                  `json:"name"`
+	RenderedScheduleEntries []RenderedScheduleEntry `json:"rendered_schedule_entries"`
 }
 
 type ScheduleEntry struct {
@@ -69,11 +69,11 @@ type ContactMethod struct {
 
 type OnCall struct {
 	User             User              `json:"user"`
-	Schedule         *Schedule         `json:"schedule,omitempty"`
+	Schedule         Schedule          `json:"schedule"`
 	EscalationPolicy *EscalationPolicy `json:"escalation_policy,omitempty"`
 	EscalationLevel  int               `json:"escalation_level"`
-	Start            *time.Time        `json:"start"`
-	End              *time.Time        `json:"end"`
+	Start            string            `json:"start"`
+	End              string            `json:"end"`
 }
 
 type EscalationPolicy struct {
@@ -106,4 +106,28 @@ type ErrorResponse struct {
 		Code    int      `json:"code"`
 		Errors  []string `json:"errors"`
 	} `json:"error"`
+}
+
+// ScheduleResponse wraps a single schedule with details
+type ScheduleResponse struct {
+	Schedule ScheduleDetail `json:"schedule"`
+}
+
+// ScheduleDetail extends Schedule with additional fields for single schedule response
+type ScheduleDetail struct {
+	ID               string            `json:"id"`
+	Name             string            `json:"name"`
+	Description      string            `json:"description"`
+	TimeZone         string            `json:"time_zone"`
+	Summary          string            `json:"summary"`
+	ScheduleLayers   []ScheduleLayer   `json:"schedule_layers,omitempty"`
+	OverrideSubcycle *OverrideSubcycle `json:"override_subcycle,omitempty"`
+	FinalSchedule    *FinalSchedule    `json:"final_schedule,omitempty"`
+}
+
+// RenderedScheduleEntry represents a schedule entry with user details
+type RenderedScheduleEntry struct {
+	User  User   `json:"user"`
+	Start string `json:"start"`
+	End   string `json:"end"`
 }

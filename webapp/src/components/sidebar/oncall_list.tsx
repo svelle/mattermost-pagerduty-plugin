@@ -7,12 +7,30 @@ import type {OnCall} from '@/types/pagerduty';
 import type {Theme} from '@/types/theme';
 
 interface Props {
-    oncalls: OnCall[];
+    onCalls: OnCall[];
     theme: Theme;
+    loading: boolean;
+    error: string | null;
 }
 
-const OnCallList: React.FC<Props> = ({oncalls, theme}) => {
-    if (oncalls.length === 0) {
+const OnCallList: React.FC<Props> = ({onCalls, theme, loading, error}) => {
+    if (loading) {
+        return (
+            <div style={{color: theme.centerChannelColor, fontSize: '14px'}}>
+                {'Loading on-call users...'}
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div style={{color: theme.errorTextColor, fontSize: '14px'}}>
+                {`Error: ${error}`}
+            </div>
+        );
+    }
+
+    if (!onCalls || onCalls.length === 0) {
         return (
             <div style={{color: theme.centerChannelColor, opacity: 0.7, fontSize: '14px'}}>
                 {'No one is currently on-call'}
@@ -21,7 +39,7 @@ const OnCallList: React.FC<Props> = ({oncalls, theme}) => {
     }
 
     // Group on-calls by schedule
-    const oncallsBySchedule = oncalls.reduce((acc, oncall) => {
+    const oncallsBySchedule = onCalls.reduce((acc, oncall) => {
         const scheduleName = oncall.schedule?.name || 'Unknown Schedule';
         if (!acc[scheduleName]) {
             acc[scheduleName] = [];
@@ -32,6 +50,16 @@ const OnCallList: React.FC<Props> = ({oncalls, theme}) => {
 
     return (
         <div className='oncall-list'>
+            <div
+                style={{
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    color: theme.centerChannelColor,
+                    marginBottom: '16px',
+                }}
+            >
+                {'Currently On-Call'}
+            </div>
             {Object.entries(oncallsBySchedule).map(([scheduleName, scheduleOncalls]) => (
                 <div
                     key={scheduleName}
@@ -82,7 +110,7 @@ const OnCallList: React.FC<Props> = ({oncalls, theme}) => {
                                 </div>
                                 {oncall.escalation_level > 0 && (
                                     <div style={{fontSize: '11px', color: theme.centerChannelColor, opacity: 0.5}}>
-                                        {'Escalation level: '}{oncall.escalation_level}
+                                        {`Level ${oncall.escalation_level}`}
                                     </div>
                                 )}
                             </div>

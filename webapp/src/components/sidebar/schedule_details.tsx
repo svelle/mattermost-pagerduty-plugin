@@ -1,175 +1,125 @@
 // Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
 // See LICENSE.txt for license information.
 
-import React, {useMemo} from 'react';
+import React from 'react';
 
-import type {Schedule, ScheduleEntry} from '@/types/pagerduty';
+import type {Schedule} from '@/types/pagerduty';
 import type {Theme} from '@/types/theme';
 
 interface Props {
-    schedule: Schedule;
+    schedule: Schedule | null;
+    onBack: () => void;
     theme: Theme;
+    loading: boolean;
 }
 
-const ScheduleDetails: React.FC<Props> = ({schedule, theme}) => {
-    const now = new Date();
-    const tomorrow = new Date(now.getTime() + (24 * 60 * 60 * 1000));
-
-    // Get schedule entries for the next 24 hours
-    const upcomingEntries = useMemo(() => {
-        if (!schedule.final_schedule?.rendered_schedule_entries) {
-            return [];
-        }
-
-        return schedule.final_schedule.rendered_schedule_entries.
-            filter((entry) => {
-                const entryStart = new Date(entry.start);
-                const entryEnd = new Date(entry.end);
-
-                // Include entries that overlap with our 24-hour window
-                return entryEnd > now && entryStart < tomorrow;
-            }).
-            sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-    }, [schedule, now, tomorrow]);
-
-    // Find who's currently on call
-    const currentOnCall = upcomingEntries.find((entry) => {
-        const entryStart = new Date(entry.start);
-        const entryEnd = new Date(entry.end);
-        return entryStart <= now && entryEnd > now;
-    });
-
-    const formatTime = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-    };
-
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        if (date.toDateString() === today.toDateString()) {
-            return 'Today';
-        } else if (date.toDateString() === tomorrow.toDateString()) {
-            return 'Tomorrow';
-        }
-        return date.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'});
-    };
-
-    const getTimeUntilNext = (entry: ScheduleEntry) => {
-        const start = new Date(entry.start);
-        const diff = start.getTime() - now.getTime();
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-        if (hours > 0) {
-            return `in ${hours}h ${minutes}m`;
-        }
-        return `in ${minutes}m`;
-    };
-
-    if (upcomingEntries.length === 0) {
+const ScheduleDetails: React.FC<Props> = ({schedule, onBack, theme, loading}) => {
+    if (loading) {
         return (
-            <div style={{color: theme.centerChannelColor, opacity: 0.7, fontSize: '14px'}}>
-                {'No on-call schedule entries for the next 24 hours'}
+            <div style={{padding: '20px', color: theme.centerChannelColor}}>
+                {'Loading schedule details...'}
             </div>
         );
     }
 
+    if (!schedule) {
+        return (
+            <div style={{padding: '20px', color: theme.centerChannelColor}}>
+                {'No schedule selected'}
+            </div>
+        );
+    }
+
+    const entries = schedule.final_schedule?.rendered_schedule_entries || [];
+
     return (
-        <div className='schedule-details'>
-            {currentOnCall && (
-                <div
+        <div style={{padding: '20px'}}>
+            <div style={{marginBottom: '16px'}}>
+                <button
+                    onClick={onBack}
                     style={{
-                        backgroundColor: theme.buttonBg,
-                        color: theme.buttonColor,
-                        padding: '16px',
-                        borderRadius: '8px',
-                        marginBottom: '20px',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        color: theme.linkColor,
+                        cursor: 'pointer',
+                        padding: '4px 8px',
+                        fontSize: '14px',
                     }}
                 >
-                    <div style={{fontSize: '12px', opacity: 0.9, marginBottom: '4px'}}>
-                        {'Currently On-Call'}
-                    </div>
-                    <div style={{fontSize: '18px', fontWeight: 600, marginBottom: '8px'}}>
-                        {currentOnCall.user.summary}
-                    </div>
-                    <div style={{fontSize: '14px', opacity: 0.9}}>
-                        {'Until '}{formatTime(currentOnCall.end)}
-                        {' ('}{formatDate(currentOnCall.end)}{')'}
-                    </div>
-                </div>
-            )}
-
-            <div style={{marginBottom: '12px'}}>
-                <h5 style={{color: theme.centerChannelColor, marginBottom: '12px'}}>
-                    {'Next 24 Hours'}
-                </h5>
+                    {'← Back'}
+                </button>
             </div>
 
-            <div className='timeline'>
-                {upcomingEntries.map((entry, index) => {
-                    const isCurrentlyOnCall = currentOnCall && entry.user.id === currentOnCall.user.id &&
-                                            entry.start === currentOnCall.start;
-                    const isPastEntry = new Date(entry.end) < now;
-                    const isFutureEntry = new Date(entry.start) > now;
+            <div style={{marginBottom: '16px'}}>
+                <h3 style={{color: theme.centerChannelColor, margin: 0}}>
+                    {schedule.name}
+                </h3>
+                {schedule.time_zone && (
+                    <div style={{color: theme.centerChannelColor, opacity: 0.7, fontSize: '14px', marginTop: '4px'}}>
+                        {schedule.time_zone}
+                    </div>
+                )}
+            </div>
 
-                    return (
-                        <div
-                            key={`${entry.user.id}-${entry.start}-${index}`}
-                            style={{
-                                display: 'flex',
-                                marginBottom: '12px',
-                                opacity: isPastEntry ? 0.5 : 1,
-                            }}
-                        >
-                            <div
+            <div style={{marginBottom: '16px'}}>
+                <h4 style={{color: theme.centerChannelColor, marginBottom: '12px'}}>
+                    {'On-Call Schedule'}
+                </h4>
+
+                {!schedule.final_schedule && (
+                    <div style={{color: theme.centerChannelColor, opacity: 0.7, fontSize: '14px'}}>
+                        {'No on-call schedule available'}
+                    </div>
+                )}
+
+                {schedule.final_schedule && entries.length === 0 && (
+                    <div style={{color: theme.centerChannelColor, opacity: 0.7, fontSize: '14px'}}>
+                        {'No on-call entries for this schedule'}
+                    </div>
+                )}
+
+                {entries.map((entry, index) => (
+                    <div
+                        key={`${entry.user.id}-${entry.start}-${index}`}
+                        data-testid={`schedule-entry-${index}`}
+                        style={{
+                            padding: '12px',
+                            backgroundColor: theme.centerChannelBg,
+                            border: `1px solid ${theme.centerChannelColor}20`,
+                            borderRadius: '4px',
+                            marginBottom: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                        }}
+                    >
+                        {entry.user.avatar_url && (
+                            <img
+                                src={entry.user.avatar_url}
+                                alt={entry.user.name}
                                 style={{
-                                    width: '4px',
-                                    backgroundColor: isCurrentlyOnCall ? theme.buttonBg : theme.centerChannelColor,
-                                    opacity: isCurrentlyOnCall ? 1 : 0.2,
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
                                     marginRight: '12px',
-                                    borderRadius: '2px',
                                 }}
                             />
-                            <div style={{flex: 1}}>
-                                <div
-                                    style={{
-                                        padding: '12px',
-                                        backgroundColor: isCurrentlyOnCall ? `${theme.buttonBg}15` : theme.centerChannelBg,
-                                        border: `1px solid ${isCurrentlyOnCall ? theme.buttonBg : theme.centerChannelColor}20`,
-                                        borderRadius: '4px',
-                                    }}
-                                >
-                                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
-                                        <div>
-                                            <div style={{fontWeight: 500, color: theme.centerChannelColor, marginBottom: '4px'}}>
-                                                {entry.user.summary}
-                                            </div>
-                                            <div style={{fontSize: '13px', color: theme.centerChannelColor, opacity: 0.7}}>
-                                                {formatTime(entry.start)}{' - '}{formatTime(entry.end)}
-                                            </div>
-                                        </div>
-                                        <div style={{fontSize: '12px', color: theme.centerChannelColor, opacity: 0.6, textAlign: 'right'}}>
-                                            <div>{formatDate(entry.start)}</div>
-                                            {isFutureEntry && (
-                                                <div style={{marginTop: '2px', fontStyle: 'italic'}}>
-                                                    {getTimeUntilNext(entry)}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
+                        )}
+                        <div style={{flex: 1}}>
+                            <div style={{fontWeight: 500, color: theme.centerChannelColor}}>
+                                {entry.user.name}
+                            </div>
+                            <div style={{fontSize: '12px', color: theme.centerChannelColor, opacity: 0.7}}>
+                                {entry.user.email}
+                            </div>
+                            <div style={{fontSize: '12px', color: theme.centerChannelColor, opacity: 0.5, marginTop: '4px'}}>
+                                {new Date(entry.start).toLocaleString()} - {new Date(entry.end).toLocaleString()}
                             </div>
                         </div>
-                    );
-                })}
+                    </div>
+                ))}
             </div>
         </div>
     );
 };
 
 export default ScheduleDetails;
-

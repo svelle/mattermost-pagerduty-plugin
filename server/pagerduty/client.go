@@ -16,10 +16,15 @@ const (
 	apiVersion     = "2"
 )
 
+// HTTPClient interface for mocking in tests
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type Client struct {
 	baseURL    string
 	apiToken   string
-	httpClient *http.Client
+	httpClient HTTPClient
 }
 
 func NewClient(apiToken, baseURL string) *Client {
@@ -95,7 +100,7 @@ func (c *Client) GetSchedules(limit, offset int) (*SchedulesResponse, error) {
 	return &response, nil
 }
 
-func (c *Client) GetSchedule(scheduleID string, since, until time.Time) (*Schedule, error) {
+func (c *Client) GetSchedule(scheduleID string, since, until time.Time) (*ScheduleResponse, error) {
 	params := url.Values{}
 	params.Set("since", since.Format(time.RFC3339))
 	params.Set("until", until.Format(time.RFC3339))
@@ -105,14 +110,12 @@ func (c *Client) GetSchedule(scheduleID string, since, until time.Time) (*Schedu
 		return nil, err
 	}
 
-	var response struct {
-		Schedule Schedule `json:"schedule"`
-	}
+	var response ScheduleResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal schedule response")
 	}
 
-	return &response.Schedule, nil
+	return &response, nil
 }
 
 func (c *Client) GetOnCalls(params url.Values) (*OnCallsResponse, error) {
@@ -136,8 +139,8 @@ func (c *Client) GetOnCalls(params url.Values) (*OnCallsResponse, error) {
 func (c *Client) GetCurrentOnCalls() (*OnCallsResponse, error) {
 	params := url.Values{}
 	params.Set("time_zone", "UTC")
-	params.Set("include[]", "users")
-	params.Set("include[]", "schedules")
+	params.Add("include[]", "users")
+	params.Add("include[]", "schedules")
 	params.Set("earliest", "true")
 
 	return c.GetOnCalls(params)

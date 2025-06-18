@@ -69,43 +69,6 @@ const PagerDutySidebar: React.FC<Props> = ({theme}) => {
         }
     };
 
-    if (loading) {
-        return (
-            <div
-                className='pagerduty-sidebar'
-                style={{padding: '20px', color: theme.centerChannelColor}}
-            >
-                <div style={{textAlign: 'center'}}>{'Loading PagerDuty schedules...'}</div>
-            </div>
-        );
-    }
-
-    if (error && !loadingDetails) {
-        return (
-            <div
-                className='pagerduty-sidebar'
-                style={{padding: '20px'}}
-            >
-                <div style={{color: theme.errorTextColor, marginBottom: '10px'}}>
-                    {'Error: '}{error}
-                </div>
-                <button
-                    onClick={handleRefresh}
-                    style={{
-                        backgroundColor: theme.buttonBg,
-                        color: theme.buttonColor,
-                        border: 'none',
-                        padding: '8px 16px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                    }}
-                >
-                    {'Retry'}
-                </button>
-            </div>
-        );
-    }
-
     return (
         <div
             className='pagerduty-sidebar'
@@ -139,7 +102,7 @@ const PagerDutySidebar: React.FC<Props> = ({theme}) => {
                         </button>
                     )}
                     <h3 style={{margin: 0, color: theme.centerChannelColor}}>
-                        {selectedSchedule ? selectedSchedule.name : 'PagerDuty Schedules'}
+                        {selectedSchedule && selectedSchedule.name ? selectedSchedule.name : 'PagerDuty Schedules'}
                     </h3>
                 </div>
                 <button
@@ -158,34 +121,25 @@ const PagerDutySidebar: React.FC<Props> = ({theme}) => {
             </div>
 
             <div style={{flex: 1, overflow: 'auto', padding: '16px'}}>
-                {(() => {
-                    if (loadingDetails) {
-                        return (
-                            <div style={{textAlign: 'center', padding: '20px', color: theme.centerChannelColor}}>
-                                {'Loading schedule details...'}
-                            </div>
-                        );
-                    }
-                    if (selectedSchedule) {
-                        return (
-                            <ScheduleDetails
-                                schedule={selectedSchedule}
-                                theme={theme}
-                            />
-                        );
-                    }
-                    return (
-                        <ScheduleList
-                            schedules={schedules}
-                            onScheduleClick={handleScheduleClick}
-                            theme={theme}
-                        />
-                    );
-                })()}
+                {selectedSchedule || loadingDetails ? (
+                    <ScheduleDetails
+                        schedule={selectedSchedule}
+                        onBack={handleBack}
+                        theme={theme}
+                        loading={loadingDetails}
+                    />
+                ) : (
+                    <ScheduleList
+                        schedules={schedules}
+                        onScheduleClick={handleScheduleClick}
+                        theme={theme}
+                        loading={loading}
+                        error={error}
+                    />
+                )}
             </div>
         </div>
     );
 };
 
 export default PagerDutySidebar;
-
