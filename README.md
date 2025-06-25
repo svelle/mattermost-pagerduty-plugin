@@ -10,20 +10,23 @@ The Mattermost PagerDuty Plugin integrates PagerDuty with Mattermost, allowing t
 
 ### Core Functionality
 - **Schedule Browser**: View all PagerDuty schedules in a clean, organized list
-- **Timeline View**: Click any schedule to see a detailed 24-hour timeline showing:
+- **Timeline View**: Click any schedule to see a detailed 48-hour timeline showing:
   - Who's currently on-call (highlighted with special styling)
   - Upcoming shifts with countdown timers
   - Smooth transitions between on-call personnel
+- **Direct Paging**: Page the current on-call person directly from the schedule view
 - **Right-Hand Sidebar**: Dedicated sidebar accessible via channel header button
 - **Real-time Data**: Always shows current information - no background syncing needed
 - **Secure Configuration**: API tokens are stored securely and never exposed in the UI
 
 ### User Interface
 - **Intuitive Navigation**: Easy back button to switch between schedule list and details
-- **Visual Indicators**: Current on-call person prominently displayed with colored background
-- **Time Display**: Shows both time and date for clarity (e.g., "Tomorrow at 09:00")
+- **Visual Indicators**: Current on-call person prominently displayed with colored background and badges
+- **Relative Time Display**: Shows human-friendly time format ("2h 30m remaining", "Starts in 1d 4h")
+- **Paging Interface**: One-click paging with incident creation dialog
 - **Responsive Design**: Clean layout that works well in the Mattermost sidebar
 - **Theme Support**: Automatically adapts to your Mattermost theme (light/dark)
+- **Enhanced Styling**: Comprehensive CSS classes for customization
 
 ### Configuration
 - **PagerDuty API Token**: Secure token storage for API authentication
@@ -49,6 +52,7 @@ After installing the plugin, configure it in **System Console > Plugins > PagerD
 1. **PagerDuty API Token**: Enter your PagerDuty API token
    - Generate a token in PagerDuty: **Configuration > API Access Keys**
    - Ensure the token has read access to schedules and users
+   - For paging functionality, the token needs write access to create incidents
 
 2. **PagerDuty API Base URL**: (Optional) Customize if using a non-standard PagerDuty instance
    - Default: `https://api.pagerduty.com`
@@ -72,10 +76,20 @@ After installing the plugin, configure it in **System Console > Plugins > PagerD
 ### Timeline View
 
 When you click on a schedule, you'll see:
-- **Current On-Call**: Prominently displayed at the top with a blue background
-- **Next 24 Hours**: A timeline showing all upcoming on-call transitions
-- **Time Until Next**: Countdown showing when the next person goes on-call
+- **Current On-Call**: Prominently displayed with colored background and ON-CALL badge
+- **Next 48 Hours**: A timeline showing all upcoming on-call transitions
+- **Relative Time**: Human-friendly time display ("2h 30m remaining", "Starts in 1d 4h")
 - **Visual Timeline**: Color-coded entries with the current on-call highlighted
+- **Direct Paging**: "📟 Page Now" button for the current on-call person
+
+### Paging Functionality
+
+The plugin allows you to directly page the current on-call person:
+- **One-Click Access**: Page button appears next to the current on-call person
+- **Incident Creation**: Creates a PagerDuty incident with customizable title and description
+- **Service Selection**: Choose which PagerDuty service to associate with the incident
+- **Smart Targeting**: Automatically assigns the incident to the current on-call person
+- **Success Feedback**: Visual confirmation when the incident is created
 
 ### Navigation
 
