@@ -131,3 +131,60 @@ type RenderedScheduleEntry struct {
 	Start string `json:"start"`
 	End   string `json:"end"`
 }
+
+// Service represents a PagerDuty service
+type Service struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Type        string `json:"type"`
+	Summary     string `json:"summary"`
+	Status      string `json:"status"`
+}
+
+// ServicesResponse wraps the services list response
+type ServicesResponse struct {
+	ListResponse
+	Services []Service `json:"services"`
+}
+
+// ServiceReference represents a reference to a service
+type ServiceReference struct {
+	ID   string `json:"id"`
+	Type string `json:"type"`
+}
+
+// AssigneeReference represents a reference to an assignee
+type AssigneeReference struct {
+	ID   string `json:"id"`
+	Type string `json:"type"`
+}
+
+// Assignment represents an incident assignment
+type Assignment struct {
+	Assignee AssigneeReference `json:"assignee"`
+}
+
+// Incident represents a PagerDuty incident
+type Incident struct {
+	ID           string         `json:"id"`
+	Type         string         `json:"type"`
+	Title        string         `json:"title"`
+	Description  string         `json:"description,omitempty"`
+	Service      ServiceReference `json:"service"`
+	Assignments  []Assignment   `json:"assignments,omitempty"`
+	Status       string         `json:"status,omitempty"`
+	CreatedAt    string         `json:"created_at,omitempty"`
+	IncidentKey  string         `json:"incident_key,omitempty"`
+	HtmlURL      string         `json:"html_url,omitempty"`
+}
+
+// CreateIncidentRequest represents the request to create an incident
+type CreateIncidentRequest struct {
+	Incident Incident `json:"incident"`
+}
+
+// CreateIncidentResponse wraps the incident creation response
+type CreateIncidentResponse struct {
+	Incident Incident `json:"incident"`
+}

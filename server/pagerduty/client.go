@@ -1,6 +1,7 @@
 package pagerduty
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -42,6 +43,10 @@ func NewClient(apiToken, baseURL string) *Client {
 }
 
 func (c *Client) doRequest(method, path string, params url.Values) ([]byte, error) {
+	return c.doRequestWithBody(method, path, params, nil)
+}
+
+func (c *Client) doRequestWithBody(method, path string, params url.Values, body interface{}) ([]byte, error) {
 	u, err := url.Parse(c.baseURL + path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse URL")
@@ -51,7 +56,16 @@ func (c *Client) doRequest(method, path string, params url.Values) ([]byte, erro
 		u.RawQuery = params.Encode()
 	}
 
-	req, err := http.NewRequest(method, u.String(), nil)
+	var requestBody io.Reader
+	if body != nil {
+		jsonBody, err := json.Marshal(body)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshal request body")
+		}
+		requestBody = bytes.NewReader(jsonBody)
+	}
+
+	req, err := http.NewRequest(method, u.String(), requestBody)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create request")
 	}
@@ -66,20 +80,20 @@ func (c *Client) doRequest(method, path string, params url.Values) ([]byte, erro
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read response body")
 	}
 
 	if resp.StatusCode >= 400 {
 		var errorResp ErrorResponse
-		if err := json.Unmarshal(body, &errorResp); err == nil && errorResp.Error.Message != "" {
+		if err := json.Unmarshal(responseBody, &errorResp); err == nil && errorResp.Error.Message != "" {
 			return nil, fmt.Errorf("PagerDuty API error: %s (code: %d)", errorResp.Error.Message, errorResp.Error.Code)
 		}
-		return nil, fmt.Errorf("PagerDuty API error: HTTP %d - %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("PagerDuty API error: HTTP %d - %s", resp.StatusCode, string(responseBody))
 	}
 
-	return body, nil
+	return responseBody, nil
 }
 
 func (c *Client) GetSchedules(limit, offset int) (*SchedulesResponse, error) {
@@ -153,4 +167,66 @@ func (c *Client) GetOnCallsForSchedule(scheduleID string) (*OnCallsResponse, err
 	params.Set("earliest", "true")
 
 	return c.GetOnCalls(params)
+}
+
+// GetServices retrieves a list of services from PagerDuty
+func (c *Client) GetServices(limit, offset int) (*ServicesResponse, error) {
+	params := url.Values{}
+	params.Set("limit", fmt.Sprintf("%d", limit))
+	params.Set("offset", fmt.Sprintf("%d", offset))
+
+	body, err := c.doRequest("GET", "/services", params)
+	if err != nil {
+		return nil, err
+	}
+
+	var response ServicesResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal services response")
+	}
+
+	return &response, nil
+}
+
+// CreateIncident creates a new incident in PagerDuty
+func (c *Client) CreateIncident(title, description, serviceID string, assigneeIDs []string) (*CreateIncidentResponse, error) {
+	incident := Incident{
+		Type:        "incident",
+		Title:       title,
+		Description: description,
+		Service: ServiceReference{
+			ID:   serviceID,
+			Type: "service_reference",
+		},
+	}
+
+	// Add assignments if provided
+	if len(assigneeIDs) > 0 {
+		assignments := make([]Assignment, len(assigneeIDs))
+		for i, assigneeID := range assigneeIDs {
+			assignments[i] = Assignment{
+				Assignee: AssigneeReference{
+					ID:   assigneeID,
+					Type: "user_reference",
+				},
+			}
+		}
+		incident.Assignments = assignments
+	}
+
+	request := CreateIncidentRequest{
+		Incident: incident,
+	}
+
+	body, err := c.doRequestWithBody("POST", "/incidents", nil, request)
+	if err != nil {
+		return nil, err
+	}
+
+	var response CreateIncidentResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal create incident response")
+	}
+
+	return &response, nil
 }

@@ -63,6 +63,48 @@ export class Client {
 
         return response.json();
     }
+
+    async getServices() {
+        const response = await fetch(`${this.baseUrl}/services`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to fetch services');
+        }
+
+        return response.json();
+    }
+
+    async createIncident(title: string, description: string, serviceId: string, assigneeIds?: string[]) {
+        const body = {
+            title,
+            description,
+            service_id: serviceId,
+            assignee_ids: assigneeIds || [],
+        };
+
+        const response = await fetch(`${this.baseUrl}/incidents`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to create incident');
+        }
+
+        return response.json();
+    }
 }
 
 const client = new Client();

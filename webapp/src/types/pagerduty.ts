@@ -96,3 +96,54 @@ export interface SchedulesResponse extends ListResponse {
 export interface OnCallsResponse extends ListResponse {
     oncalls: OnCall[];
 }
+
+export interface Service {
+    id: string;
+    name: string;
+    description: string;
+    type: string;
+    summary: string;
+    status: string;
+}
+
+export interface ServicesResponse extends ListResponse {
+    services: Service[];
+}
+
+export interface ServiceReference {
+    id: string;
+    type: string;
+}
+
+export interface AssigneeReference {
+    id: string;
+    type: string;
+}
+
+export interface Assignment {
+    assignee: AssigneeReference;
+}
+
+export interface Incident {
+    id: string;
+    type: string;
+    title: string;
+    description?: string;
+    service: ServiceReference;
+    assignments?: Assignment[];
+    status?: string;
+    created_at?: string;
+    incident_key?: string;
+    html_url?: string;
+}
+
+export interface CreateIncidentRequest {
+    title: string;
+    description?: string;
+    service_id: string;
+    assignee_ids?: string[];
+}
+
+export interface CreateIncidentResponse {
+    incident: Incident;
+}

@@ -49,7 +49,7 @@ const PagerDutySidebar: React.FC<Props> = ({theme}) => {
         setLoadingDetails(true);
         try {
             const scheduleDetails = await client.getScheduleDetails(scheduleId);
-            setSelectedSchedule(scheduleDetails);
+            setSelectedSchedule(scheduleDetails.schedule);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load schedule details');
         } finally {

@@ -21,6 +21,8 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 	apiRouter.HandleFunc("/schedules", p.handleGetSchedules).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/oncalls", p.handleGetOnCalls).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/schedule", p.handleGetScheduleDetails).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/services", p.handleGetServices).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/incidents", p.handleCreateIncident).Methods(http.MethodPost)
 
 	router.ServeHTTP(w, r)
 }
