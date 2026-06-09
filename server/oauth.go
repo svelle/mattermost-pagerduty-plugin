@@ -32,6 +32,14 @@ func (p *Plugin) getOAuthRedirectURI() string {
 	return fmt.Sprintf("%s/plugins/%s/api/v1/oauth/callback", p.siteURL, manifest.Id)
 }
 
+// oauthTokenURL returns the PagerDuty OAuth token endpoint, allowing tests to override it.
+func (p *Plugin) oauthTokenURL() string {
+	if p.tokenURLOverride != "" {
+		return p.tokenURLOverride
+	}
+	return pagerDutyTokenURL
+}
+
 func (p *Plugin) handleOAuthConnect(w http.ResponseWriter, r *http.Request) {
 	userID := r.Header.Get("Mattermost-User-ID")
 	p.client.Log.Debug("handleOAuthConnect called", "user_id", userID)
@@ -163,7 +171,7 @@ func (p *Plugin) exchangeCodeForToken(code string) (*kvstore.OAuthToken, error) 
 	data.Set("code", code)
 	data.Set("redirect_uri", p.getOAuthRedirectURI())
 
-	req, err := http.NewRequest(http.MethodPost, pagerDutyTokenURL, strings.NewReader(data.Encode()))
+	req, err := http.NewRequest(http.MethodPost, p.oauthTokenURL(), strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create token request")
 	}
@@ -281,44 +289,86 @@ func (p *Plugin) refreshUserToken(userID string, token *kvstore.OAuthToken) (*kv
 	data.Set("client_secret", config.OAuthClientSecret)
 	data.Set("refresh_token", token.RefreshToken)
 
-	req, err := http.NewRequest(http.MethodPost, pagerDutyTokenURL, strings.NewReader(data.Encode()))
+	req, err := http.NewRequest(http.MethodPost, p.oauthTokenURL(), strings.NewReader(data.Encode()))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create refresh token request")
+		return nil, fmt.Errorf("%w: %v", ErrTokenRefreshUnavailable, errors.Wrap(err, "failed to create refresh token request"))
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to refresh token")
+		// Network-level failure: treat as transient and keep the stored token so we
+		// don't force a reconnect (or burn a still-valid refresh token) on a blip.
+		return nil, fmt.Errorf("%w: %v", ErrTokenRefreshUnavailable, errors.Wrap(err, "failed to refresh token"))
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	const maxTokenResponseSize = 1 << 20 // 1MB
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxTokenResponseSize))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read refresh token response")
+		return nil, fmt.Errorf("%w: %v", ErrTokenRefreshUnavailable, errors.Wrap(err, "failed to read refresh token response"))
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("token refresh failed: HTTP %d - %s", resp.StatusCode, string(body))
+		return nil, p.classifyTokenRefreshError(userID, resp.StatusCode, body)
 	}
 
 	var tokenResp oauthTokenResponse
 	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		return nil, errors.Wrap(err, "failed to parse refresh token response")
+		return nil, fmt.Errorf("%w: %v", ErrTokenRefreshUnavailable, errors.Wrap(err, "failed to parse refresh token response"))
+	}
+
+	// PagerDuty rotates refresh tokens, but if a response ever omits one, retain the
+	// existing refresh token rather than blanking it out.
+	refreshToken := tokenResp.RefreshToken
+	if refreshToken == "" {
+		refreshToken = token.RefreshToken
 	}
 
 	newToken := &kvstore.OAuthToken{
 		AccessToken:  tokenResp.AccessToken,
-		RefreshToken: tokenResp.RefreshToken,
+		RefreshToken: refreshToken,
 		TokenType:    tokenResp.TokenType,
 		ExpiresAt:    time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second),
 	}
 
 	if err := p.kvstore.SetUserToken(userID, newToken); err != nil {
-		return nil, errors.Wrap(err, "failed to store refreshed token")
+		return nil, fmt.Errorf("%w: %v", ErrTokenRefreshUnavailable, errors.Wrap(err, "failed to store refreshed token"))
 	}
 
 	p.client.Log.Debug("Successfully refreshed OAuth token", "user_id", userID)
 	return newToken, nil
+}
+
+// classifyTokenRefreshError maps a non-200 token endpoint response to either a terminal
+// error (the refresh token is dead — user must reconnect) or a transient error (a server
+// or temporary failure that should be retried without discarding the token).
+func (p *Plugin) classifyTokenRefreshError(userID string, statusCode int, body []byte) error {
+	var errResp struct {
+		Error            string `json:"error"`
+		ErrorDescription string `json:"error_description"`
+	}
+	_ = json.Unmarshal(body, &errResp)
+
+	// invalid_grant means the refresh token was revoked, already rotated, or expired.
+	// This is terminal: delete the stored token so the user is prompted to reconnect,
+	// and never replay the dead token (replaying can trip PagerDuty's reuse detection
+	// and revoke the whole token family).
+	if errResp.Error == "invalid_grant" {
+		if delErr := p.kvstore.DeleteUserToken(userID); delErr != nil {
+			p.client.Log.Error("Failed to delete invalid user token", "user_id", userID, "error", delErr.Error())
+		}
+		p.client.Log.Warn("PagerDuty refresh token invalid; user must reconnect",
+			"user_id", userID, "description", errResp.ErrorDescription)
+		return fmt.Errorf("%w: token refresh failed: HTTP %d - %s", ErrTokenExpired, statusCode, string(body))
+	}
+
+	// 5xx responses are transient: keep the token and let the next call retry.
+	if statusCode >= http.StatusInternalServerError {
+		return fmt.Errorf("%w: token refresh failed: HTTP %d - %s", ErrTokenRefreshUnavailable, statusCode, string(body))
+	}
+
+	// Other 4xx responses (e.g. a misconfigured client) are terminal but likely a
+	// configuration problem rather than a bad token, so keep the token for inspection.
+	return fmt.Errorf("%w: token refresh failed: HTTP %d - %s", ErrTokenExpired, statusCode, string(body))
 }
