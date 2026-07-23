@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -26,6 +27,10 @@ const (
 
 	oauthScopes      = "schedules.read schedules.write schedules_overrides.read schedules_overrides.write oncalls.read services.read incidents.read incidents.write users.read webhook_subscriptions.read webhook_subscriptions.write" //nolint:lll
 	oauthStateExpiry = 10 * time.Minute
+
+	// tokenRefreshTimeout bounds a single token refresh request so a hung PagerDuty
+	// token endpoint cannot block indefinitely (and hold the per-user refresh lock).
+	tokenRefreshTimeout = 30 * time.Second
 )
 
 func (p *Plugin) getOAuthRedirectURI() string {
@@ -289,24 +294,27 @@ func (p *Plugin) refreshUserToken(userID string, token *kvstore.OAuthToken) (*kv
 	data.Set("client_secret", config.OAuthClientSecret)
 	data.Set("refresh_token", token.RefreshToken)
 
-	req, err := http.NewRequest(http.MethodPost, p.oauthTokenURL(), strings.NewReader(data.Encode()))
+	ctx, cancel := context.WithTimeout(context.Background(), tokenRefreshTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.oauthTokenURL(), strings.NewReader(data.Encode()))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrTokenRefreshUnavailable, errors.Wrap(err, "failed to create refresh token request"))
+		return nil, errors.Wrapf(ErrTokenRefreshUnavailable, "failed to create refresh token request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		// Network-level failure: treat as transient and keep the stored token so we
-		// don't force a reconnect (or burn a still-valid refresh token) on a blip.
-		return nil, fmt.Errorf("%w: %v", ErrTokenRefreshUnavailable, errors.Wrap(err, "failed to refresh token"))
+		// Network-level failure (including a request timeout): treat as transient and keep
+		// the stored token so we don't force a reconnect (or burn a still-valid token) on a blip.
+		return nil, errors.Wrapf(ErrTokenRefreshUnavailable, "failed to refresh token: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	const maxTokenResponseSize = 1 << 20 // 1MB
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxTokenResponseSize))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrTokenRefreshUnavailable, errors.Wrap(err, "failed to read refresh token response"))
+		return nil, errors.Wrapf(ErrTokenRefreshUnavailable, "failed to read refresh token response: %v", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -315,7 +323,7 @@ func (p *Plugin) refreshUserToken(userID string, token *kvstore.OAuthToken) (*kv
 
 	var tokenResp oauthTokenResponse
 	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrTokenRefreshUnavailable, errors.Wrap(err, "failed to parse refresh token response"))
+		return nil, errors.Wrapf(ErrTokenRefreshUnavailable, "failed to parse refresh token response: %v", err)
 	}
 
 	// PagerDuty rotates refresh tokens, but if a response ever omits one, retain the
@@ -333,7 +341,7 @@ func (p *Plugin) refreshUserToken(userID string, token *kvstore.OAuthToken) (*kv
 	}
 
 	if err := p.kvstore.SetUserToken(userID, newToken); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrTokenRefreshUnavailable, errors.Wrap(err, "failed to store refreshed token"))
+		return nil, errors.Wrapf(ErrTokenRefreshUnavailable, "failed to store refreshed token: %v", err)
 	}
 
 	p.client.Log.Debug("Successfully refreshed OAuth token", "user_id", userID)
@@ -360,15 +368,15 @@ func (p *Plugin) classifyTokenRefreshError(userID string, statusCode int, body [
 		}
 		p.client.Log.Warn("PagerDuty refresh token invalid; user must reconnect",
 			"user_id", userID, "description", errResp.ErrorDescription)
-		return fmt.Errorf("%w: token refresh failed: HTTP %d - %s", ErrTokenExpired, statusCode, string(body))
+		return errors.Wrapf(ErrTokenExpired, "token refresh failed: HTTP %d - %s", statusCode, string(body))
 	}
 
 	// 5xx responses are transient: keep the token and let the next call retry.
 	if statusCode >= http.StatusInternalServerError {
-		return fmt.Errorf("%w: token refresh failed: HTTP %d - %s", ErrTokenRefreshUnavailable, statusCode, string(body))
+		return errors.Wrapf(ErrTokenRefreshUnavailable, "token refresh failed: HTTP %d - %s", statusCode, string(body))
 	}
 
 	// Other 4xx responses (e.g. a misconfigured client) are terminal but likely a
 	// configuration problem rather than a bad token, so keep the token for inspection.
-	return fmt.Errorf("%w: token refresh failed: HTTP %d - %s", ErrTokenExpired, statusCode, string(body))
+	return errors.Wrapf(ErrTokenExpired, "token refresh failed: HTTP %d - %s", statusCode, string(body))
 }

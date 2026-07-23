@@ -36,7 +36,7 @@ func (p *Plugin) handleGetPagerDutyClient(w http.ResponseWriter, r *http.Request
 			errID = "api.pagerduty.token_expired"
 		case stderrors.Is(err, ErrTokenRefreshUnavailable):
 			statusCode = http.StatusServiceUnavailable
-			errID = "api.pagerduty.token_refresh_unavailable"
+			errID = "api.pagerduty.token_refresh_unavailable.error"
 		}
 
 		p.client.Log.Warn("Failed to get PagerDuty client for user", "user_id", userID, "error", err.Error())
