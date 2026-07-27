@@ -15,6 +15,7 @@ import SubscriptionManager from './subscription_manager';
 import client, {ClientError} from '@/client/client';
 import type {Incident, IncidentFilters, OnCall, Schedule, User, CreateIncidentResponse} from '@/types/pagerduty';
 import type {Theme} from '@/types/theme';
+import {getUserDisplayName} from '@/utils/user';
 
 type TabName = 'oncall' | 'schedules' | 'incidents';
 
@@ -236,7 +237,7 @@ const PagerDutySidebar: React.FC<Props> = ({theme}) => {
                 if (oc.user && !usersMap.has(oc.user.id)) {
                     usersMap.set(oc.user.id, {
                         ...oc.user,
-                        name: oc.user.name || oc.user.summary || oc.user.email || oc.user.id,
+                        name: getUserDisplayName(oc.user),
                     });
                 }
                 if (oc.user && oc.schedule?.name && !scheduleMap[oc.user.id]) {
