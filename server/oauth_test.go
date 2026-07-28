@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/svelle/mattermost-pagerduty-plugin/server/store/kvstore"
@@ -59,8 +60,33 @@ func newStatefulStore(initial *kvstore.OAuthToken) (*mockKVStore, *tokenState) {
 	}, st
 }
 
-func newOAuthTestPlugin(tokenURL string, store kvstore.KVStore) *Plugin {
-	p := newTestPlugin(newMockAPI())
+// clusterLockRecorder records the keys written through KVSetWithOptions, which is how
+// cluster.Mutex acquires and releases its cluster-wide lock.
+type clusterLockRecorder struct {
+	mu   sync.Mutex
+	keys []string
+}
+
+func (r *clusterLockRecorder) record(key string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.keys = append(r.keys, key)
+}
+
+func (r *clusterLockRecorder) recorded() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.keys...)
+}
+
+func newOAuthTestPlugin(tokenURL string, store kvstore.KVStore) (*Plugin, *clusterLockRecorder) {
+	locks := &clusterLockRecorder{}
+	api := newMockAPI()
+	api.On("KVSetWithOptions", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		locks.record(args.Get(0).(string))
+	}).Return(true, nil).Maybe()
+
+	p := newTestPlugin(api)
 	p.kvstore = store
 	p.configuration = &configuration{
 		OAuthClientID:     "client-id",
@@ -68,7 +94,7 @@ func newOAuthTestPlugin(tokenURL string, store kvstore.KVStore) *Plugin {
 		APIBaseURL:        "https://api.pagerduty.com",
 	}
 	p.tokenURLOverride = tokenURL
-	return p
+	return p, locks
 }
 
 func expiredToken() *kvstore.OAuthToken {
@@ -94,7 +120,7 @@ func TestGetPagerDutyClientForUser_SingleFlightRefresh(t *testing.T) {
 	defer server.Close()
 
 	store, state := newStatefulStore(expiredToken())
-	p := newOAuthTestPlugin(server.URL, store)
+	p, locks := newOAuthTestPlugin(server.URL, store)
 
 	const n = 25
 	var wg sync.WaitGroup
@@ -123,6 +149,10 @@ func TestGetPagerDutyClientForUser_SingleFlightRefresh(t *testing.T) {
 	assert.Equal(t, "new-refresh", state.token.RefreshToken)
 	assert.Equal(t, 1, state.setCount, "token must be persisted exactly once")
 	state.mu.Unlock()
+
+	// The local lock keeps the waiters off the cluster lock, so it is taken once
+	// (one KV write to acquire, one to release) rather than once per caller.
+	assert.Len(t, locks.recorded(), 2, "cluster lock must be acquired and released once")
 }
 
 // TestRefreshUserToken_InvalidGrantIsTerminal verifies invalid_grant clears the
@@ -135,7 +165,7 @@ func TestRefreshUserToken_InvalidGrantIsTerminal(t *testing.T) {
 	defer server.Close()
 
 	store, state := newStatefulStore(expiredToken())
-	p := newOAuthTestPlugin(server.URL, store)
+	p, _ := newOAuthTestPlugin(server.URL, store)
 
 	_, err := p.getPagerDutyClientForUser("user-1")
 	require.Error(t, err)
@@ -158,7 +188,7 @@ func TestRefreshUserToken_ServerErrorIsTransient(t *testing.T) {
 	defer server.Close()
 
 	store, state := newStatefulStore(expiredToken())
-	p := newOAuthTestPlugin(server.URL, store)
+	p, _ := newOAuthTestPlugin(server.URL, store)
 
 	_, err := p.getPagerDutyClientForUser("user-1")
 	require.Error(t, err)
@@ -181,7 +211,7 @@ func TestRefreshUserToken_NetworkErrorIsTransient(t *testing.T) {
 	server.Close()
 
 	store, state := newStatefulStore(expiredToken())
-	p := newOAuthTestPlugin(url, store)
+	p, _ := newOAuthTestPlugin(url, store)
 
 	_, err := p.getPagerDutyClientForUser("user-1")
 	require.Error(t, err)
@@ -205,7 +235,7 @@ func TestRefreshUserToken_PreservesRefreshTokenWhenOmitted(t *testing.T) {
 	initial := expiredToken()
 	initial.RefreshToken = "keep-me"
 	store, state := newStatefulStore(initial)
-	p := newOAuthTestPlugin(server.URL, store)
+	p, _ := newOAuthTestPlugin(server.URL, store)
 
 	client, err := p.getPagerDutyClientForUser("user-1")
 	require.NoError(t, err)
@@ -221,9 +251,54 @@ func TestRefreshUserToken_PreservesRefreshTokenWhenOmitted(t *testing.T) {
 // TestGetPagerDutyClientForUser_NotConnected verifies the no-token path is unchanged.
 func TestGetPagerDutyClientForUser_NotConnected(t *testing.T) {
 	store, _ := newStatefulStore(nil)
-	p := newOAuthTestPlugin("http://127.0.0.1:0", store)
+	p, locks := newOAuthTestPlugin("http://127.0.0.1:0", store)
 
 	_, err := p.getPagerDutyClientForUser("user-1")
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, ErrNotConnected))
+	assert.Empty(t, locks.recorded(), "no refresh lock should be taken when not connected")
+}
+
+// TestRefreshUserToken_GuardedByPerUserClusterLock verifies the refresh is guarded by a
+// cluster-wide mutex keyed per user, so the lock spans nodes in a clustered deployment.
+func TestRefreshUserToken_GuardedByPerUserClusterLock(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"new-access","refresh_token":"new-refresh","token_type":"bearer","expires_in":3600}`))
+	}))
+	defer server.Close()
+
+	store, _ := newStatefulStore(expiredToken())
+	p, locks := newOAuthTestPlugin(server.URL, store)
+
+	_, err := p.getPagerDutyClientForUser("user-1")
+	require.NoError(t, err)
+
+	// cluster.Mutex namespaces its KV key with a "mutex_" prefix, writing once to
+	// acquire the lock and once to release it.
+	keys := locks.recorded()
+	require.Len(t, keys, 2, "expected one KV write to acquire the lock and one to release it")
+	for _, key := range keys {
+		assert.Equal(t, "mutex_"+tokenRefreshLockPrefix+"user-1", key)
+	}
+}
+
+// TestRefreshUserTokenSingleFlight_SkipsLockWhenTokenAlreadyFresh verifies a caller whose
+// token was refreshed by someone else reuses it without locking or calling PagerDuty.
+func TestRefreshUserTokenSingleFlight_SkipsLockWhenTokenAlreadyFresh(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		t.Error("token endpoint must not be called for a fresh token")
+	}))
+	defer server.Close()
+
+	fresh := expiredToken()
+	fresh.AccessToken = "fresh-access"
+	fresh.ExpiresAt = time.Now().Add(time.Hour)
+	store, _ := newStatefulStore(fresh)
+	p, locks := newOAuthTestPlugin(server.URL, store)
+
+	token, err := p.refreshUserTokenSingleFlight("user-1")
+	require.NoError(t, err)
+	assert.Equal(t, "fresh-access", token.AccessToken)
+	assert.Empty(t, locks.recorded(), "cluster lock must be skipped when the token is already fresh")
 }

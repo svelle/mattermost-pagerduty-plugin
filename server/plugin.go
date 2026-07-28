@@ -4,16 +4,28 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost/server/public/plugin"
 	"github.com/mattermost/mattermost/server/public/pluginapi"
+	"github.com/mattermost/mattermost/server/public/pluginapi/cluster"
 	"github.com/pkg/errors"
 
 	"github.com/svelle/mattermost-pagerduty-plugin/server/pagerduty"
 	"github.com/svelle/mattermost-pagerduty-plugin/server/store/kvstore"
+)
+
+const (
+	// tokenRefreshLockPrefix namespaces the per-user cluster mutex guarding token refreshes.
+	tokenRefreshLockPrefix = "pd_token_refresh_"
+
+	// tokenRefreshLockTimeout bounds how long a caller waits for the cluster-wide refresh
+	// lock before reporting a transient failure instead of blocking the request forever.
+	tokenRefreshLockTimeout = 30 * time.Second
 )
 
 var (
@@ -64,8 +76,9 @@ type Plugin struct {
 	onCallMonitor *OnCallMonitor
 
 	// tokenRefreshLocks holds a per-user *sync.Mutex used to serialize OAuth token
-	// refreshes. PagerDuty rotates refresh tokens, so concurrent refreshes of the same
-	// user's token would replay an already-rotated refresh token and fail (invalid_grant).
+	// refreshes within this process. PagerDuty rotates refresh tokens, so concurrent
+	// refreshes of the same user's token would replay an already-rotated refresh token
+	// and fail (invalid_grant). Cross-node exclusion is handled by a cluster mutex.
 	tokenRefreshLocks sync.Map
 
 	// tokenURLOverride, when set, replaces the PagerDuty OAuth token endpoint. Used in tests.
@@ -149,31 +162,67 @@ func (p *Plugin) getPagerDutyClientForUser(userID string) (*pagerduty.Client, er
 	return p.createPagerDutyClient(token.AccessToken, config.APIBaseURL), nil
 }
 
-// userRefreshLock returns the per-user mutex used to serialize token refreshes.
+// userRefreshLock returns the per-user, process-local mutex used to serialize token refreshes.
 func (p *Plugin) userRefreshLock(userID string) *sync.Mutex {
 	lock, _ := p.tokenRefreshLocks.LoadOrStore(userID, &sync.Mutex{})
 	return lock.(*sync.Mutex)
 }
 
-// refreshUserTokenSingleFlight refreshes a user's token while holding a per-user lock,
-// guaranteeing only one refresh per user is in flight at a time. It uses double-checked
-// locking: after acquiring the lock it re-reads the token and re-checks expiry, so a
-// caller that was waiting reuses the token a concurrent refresh already rotated instead
-// of replaying a now-invalid refresh token.
-func (p *Plugin) refreshUserTokenSingleFlight(userID string) (*kvstore.OAuthToken, error) {
-	lock := p.userRefreshLock(userID)
-	lock.Lock()
-	defer lock.Unlock()
-
+// loadTokenForRefresh reads the user's stored token and reports whether it still needs
+// refreshing. Callers use it to re-check state after acquiring a lock.
+func (p *Plugin) loadTokenForRefresh(userID string) (*kvstore.OAuthToken, bool, error) {
 	token, err := p.kvstore.GetUserToken(userID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve user token")
+		return nil, false, errors.Wrap(err, "failed to retrieve user token")
 	}
 	if token == nil {
-		return nil, ErrNotConnected
+		return nil, false, ErrNotConnected
 	}
-	if !token.IsExpired() {
-		// Another caller refreshed the token while we waited for the lock.
+	return token, token.IsExpired(), nil
+}
+
+// refreshUserTokenSingleFlight refreshes a user's token under two layers of locking so that
+// only one refresh per user runs at a time, even in a clustered deployment. PagerDuty rotates
+// refresh tokens, so a concurrent refresh would replay an already-rotated token and fail
+// (invalid_grant), which can revoke the whole token family via reuse detection.
+//
+// The process-local mutex serializes goroutines on this node cheaply; the cluster mutex then
+// serializes across nodes. Each layer re-reads the token once the lock is held, so a caller
+// that waited reuses the token another refresher already rotated instead of replaying it.
+func (p *Plugin) refreshUserTokenSingleFlight(userID string) (*kvstore.OAuthToken, error) {
+	localLock := p.userRefreshLock(userID)
+	localLock.Lock()
+	defer localLock.Unlock()
+
+	// Re-check before reaching for the cluster lock: a goroutine on this node may have
+	// refreshed while we waited, which avoids the cluster lock's KV round-trips entirely.
+	token, needsRefresh, err := p.loadTokenForRefresh(userID)
+	if err != nil {
+		return nil, err
+	}
+	if !needsRefresh {
+		return token, nil
+	}
+
+	clusterLock, err := cluster.NewMutex(p.API, tokenRefreshLockPrefix+userID)
+	if err != nil {
+		return nil, errors.Wrapf(ErrTokenRefreshUnavailable, "failed to create refresh lock: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), tokenRefreshLockTimeout)
+	defer cancel()
+
+	if err = clusterLock.LockWithContext(ctx); err != nil {
+		return nil, errors.Wrapf(ErrTokenRefreshUnavailable, "failed to acquire refresh lock: %v", err)
+	}
+	defer clusterLock.Unlock()
+
+	// Re-check now that the cluster lock is held: another node may have refreshed.
+	token, needsRefresh, err = p.loadTokenForRefresh(userID)
+	if err != nil {
+		return nil, err
+	}
+	if !needsRefresh {
 		return token, nil
 	}
 
