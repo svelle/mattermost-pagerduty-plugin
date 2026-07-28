@@ -83,6 +83,9 @@ type Plugin struct {
 
 	// tokenURLOverride, when set, replaces the PagerDuty OAuth token endpoint. Used in tests.
 	tokenURLOverride string
+
+	// refreshLockTimeoutOverride, when set, replaces tokenRefreshLockTimeout. Used in tests.
+	refreshLockTimeoutOverride time.Duration
 }
 
 // OnActivate is invoked when the plugin is activated. If an error is returned, the plugin will be deactivated.
@@ -168,6 +171,14 @@ func (p *Plugin) userRefreshLock(userID string) *sync.Mutex {
 	return lock.(*sync.Mutex)
 }
 
+// refreshLockTimeout returns how long to wait for the cluster-wide refresh lock.
+func (p *Plugin) refreshLockTimeout() time.Duration {
+	if p.refreshLockTimeoutOverride > 0 {
+		return p.refreshLockTimeoutOverride
+	}
+	return tokenRefreshLockTimeout
+}
+
 // loadTokenForRefresh reads the user's stored token and reports whether it still needs
 // refreshing. Callers use it to re-check state after acquiring a lock.
 func (p *Plugin) loadTokenForRefresh(userID string) (*kvstore.OAuthToken, bool, error) {
@@ -209,7 +220,7 @@ func (p *Plugin) refreshUserTokenSingleFlight(userID string) (*kvstore.OAuthToke
 		return nil, errors.Wrapf(ErrTokenRefreshUnavailable, "failed to create refresh lock: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), tokenRefreshLockTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), p.refreshLockTimeout())
 	defer cancel()
 
 	if err = clusterLock.LockWithContext(ctx); err != nil {

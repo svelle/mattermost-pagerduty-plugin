@@ -80,11 +80,18 @@ func (r *clusterLockRecorder) recorded() []string {
 }
 
 func newOAuthTestPlugin(tokenURL string, store kvstore.KVStore) (*Plugin, *clusterLockRecorder) {
+	return newOAuthTestPluginWithLock(tokenURL, store, true)
+}
+
+// newOAuthTestPluginWithLock builds a test plugin whose cluster lock acquisition succeeds or
+// fails. cluster.Mutex reads a false result from its atomic KV write as "held elsewhere", so
+// lockAcquired=false simulates another cluster node already holding the refresh lock.
+func newOAuthTestPluginWithLock(tokenURL string, store kvstore.KVStore, lockAcquired bool) (*Plugin, *clusterLockRecorder) {
 	locks := &clusterLockRecorder{}
 	api := newMockAPI()
 	api.On("KVSetWithOptions", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		locks.record(args.Get(0).(string))
-	}).Return(true, nil).Maybe()
+	}).Return(lockAcquired, nil).Maybe()
 
 	p := newTestPlugin(api)
 	p.kvstore = store
@@ -262,25 +269,56 @@ func TestGetPagerDutyClientForUser_NotConnected(t *testing.T) {
 // TestRefreshUserToken_GuardedByPerUserClusterLock verifies the refresh is guarded by a
 // cluster-wide mutex keyed per user, so the lock spans nodes in a clustered deployment.
 func TestRefreshUserToken_GuardedByPerUserClusterLock(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"access_token":"new-access","refresh_token":"new-refresh","token_type":"bearer","expires_in":3600}`))
-	}))
-	defer server.Close()
+	t.Run("acquires and releases a per-user lock", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"access_token":"new-access","refresh_token":"new-refresh","token_type":"bearer","expires_in":3600}`))
+		}))
+		defer server.Close()
 
-	store, _ := newStatefulStore(expiredToken())
-	p, locks := newOAuthTestPlugin(server.URL, store)
+		store, _ := newStatefulStore(expiredToken())
+		p, locks := newOAuthTestPlugin(server.URL, store)
 
-	_, err := p.getPagerDutyClientForUser("user-1")
-	require.NoError(t, err)
+		_, err := p.getPagerDutyClientForUser("user-1")
+		require.NoError(t, err)
 
-	// cluster.Mutex namespaces its KV key with a "mutex_" prefix, writing once to
-	// acquire the lock and once to release it.
-	keys := locks.recorded()
-	require.Len(t, keys, 2, "expected one KV write to acquire the lock and one to release it")
-	for _, key := range keys {
-		assert.Equal(t, "mutex_"+tokenRefreshLockPrefix+"user-1", key)
-	}
+		// cluster.Mutex namespaces its KV key with a "mutex_" prefix, writing once to
+		// acquire the lock and once to release it.
+		keys := locks.recorded()
+		require.Len(t, keys, 2, "expected one KV write to acquire the lock and one to release it")
+		for _, key := range keys {
+			assert.Equal(t, "mutex_"+tokenRefreshLockPrefix+"user-1", key)
+		}
+	})
+
+	t.Run("times out and preserves the token when the lock is held elsewhere", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			t.Error("token endpoint must not be called without the refresh lock")
+		}))
+		defer server.Close()
+
+		store, state := newStatefulStore(expiredToken())
+		p, locks := newOAuthTestPluginWithLock(server.URL, store, false)
+		// cluster.Mutex retries roughly every second, so a sub-second budget makes the
+		// timeout fire on the first retry.
+		p.refreshLockTimeoutOverride = 200 * time.Millisecond
+
+		_, err := p.getPagerDutyClientForUser("user-1")
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, ErrTokenRefreshUnavailable), "a contended lock must be transient")
+		assert.False(t, errors.Is(err, ErrTokenExpired), "a contended lock must not force a reconnect")
+
+		// One write to attempt the lock and none to release it, since it was never held.
+		assert.Equal(t, []string{"mutex_" + tokenRefreshLockPrefix + "user-1"}, locks.recorded())
+
+		state.mu.Lock()
+		defer state.mu.Unlock()
+		assert.False(t, state.deleted, "token must be preserved when the lock is unavailable")
+		require.NotNil(t, state.token)
+		assert.Equal(t, "old-access", state.token.AccessToken)
+		assert.Equal(t, "old-refresh", state.token.RefreshToken)
+		assert.Zero(t, state.setCount, "token must not be rewritten when the lock is unavailable")
+	})
 }
 
 // TestRefreshUserTokenSingleFlight_SkipsLockWhenTokenAlreadyFresh verifies a caller whose
